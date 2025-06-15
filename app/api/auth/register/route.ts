@@ -1,0 +1,53 @@
+// get all the data from frontend
+// connecting to the database
+import { connectionToDatabase } from "@/lib/db";
+import User from "@/models/User";
+import { error } from "console";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+
+    // validation
+    try {
+        const { email, password } = await request.json()
+
+
+        if (!email || !password) {
+            return NextResponse.json(
+                { error: "email and password are required" },
+                { status: 400 }
+            )
+        }
+
+        // exsiting user check
+        await connectionToDatabase()
+
+        const existingUser = await User.findOne({ email })
+
+        if (!existingUser) {
+            return NextResponse.json(
+                { error: "user already registered" },
+                { status: 400 }
+            )
+        }
+
+        // create user database
+        await User.create({
+            email, password
+        })
+
+
+        // return succesful registretion
+        return NextResponse.json(
+            { message: "user successfully registeerd" },
+            { status: 400 }
+        )
+    } catch (error) {
+        console.error("registretion error")
+        return NextResponse.json(
+            { error: "user already registered" },
+            { status: 400 }
+        )
+    }
+
+}
