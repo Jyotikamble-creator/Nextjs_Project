@@ -4,6 +4,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectionToDatabase } from "./db";
 
+
 // credentials{email,password}
 
 export const authOptions:NextAuthOptions={
@@ -52,7 +53,33 @@ export const authOptions:NextAuthOptions={
             }
          }
       })
-   ]
+   ],
+
+   callbacks:{
+      // these are overwrite methods
+      async jwt({token,user}) {
+         if(user){
+            token.id=user.id
+         }
+         return token
+         
+      },
+      async session({token,user,session}) {
+         if(session.user){
+           session.user.id= token.id as string
+         }
+         return session;
+         
+      },
+      pages:{
+         signIn:"/login",
+         error:"/login"
+      },
+      session:{strategy:"jwt"},
+      maxAge:30*24*60*60
+     
+   },
+   secret:process.env.NEXTAUTH_SECRET,
 }
 
 
