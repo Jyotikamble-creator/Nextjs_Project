@@ -3,7 +3,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation'
 import React, { useState } from 'react'
 
-const RegisterPage = () => {
+function RegisterPage  ()  {
     // states
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
