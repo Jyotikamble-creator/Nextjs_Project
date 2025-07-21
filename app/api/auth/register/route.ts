@@ -4,6 +4,11 @@ import { connectionToDatabase } from "@/lib/db";
 import User from "@/models/User";
 import { error } from "console";
 import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+
+// const hashedPassword = await bcrypt.hash(password, 10);
+// await User.create({ email, password: hashedPassword });
+
 
 export async function POST(request: NextRequest) {
 
@@ -24,12 +29,9 @@ export async function POST(request: NextRequest) {
 
         const existingUser = await User.findOne({ email })
 
-        if (!existingUser) {
-            return NextResponse.json(
-                { error: "user already registered" },
-                { status: 400 }
-            )
-        }
+       if (existingUser) {
+  return NextResponse.json({ error: "User already registered" }, { status: 400 });
+}
 
         // create user database
         await User.create({
