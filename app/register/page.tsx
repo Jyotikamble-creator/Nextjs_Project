@@ -7,6 +7,7 @@ function RegisterPage  ()  {
     // states
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
+    const [error, setError] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
 
     const router = useRouter();
@@ -38,8 +39,8 @@ function RegisterPage  ()  {
 
             console.log(data)
             router.push("/login")
-        } catch (error) {
-            console.log(error)
+        } catch (error:any) {
+            setError(error.message||"registration failed")
         }
 
     }
