@@ -27,19 +27,26 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
 
     const validateFile = (file: File) => {
         if (fileType === "video") {
-            if (!fileType.type.startWith("video/")) {
-                setError("upload valid file")
-
+            if (!file.type.startsWith("video/")) {
+                setError("Upload a valid video file");
+                return false;
             }
-
             if (file.size > 100 * 1024 * 1024) {
-                setError("file size must be less than 100MB")
+                setError("File size must be less than 100MB");
+                return false;
+            }
+        }
+
+        if (fileType === "image") {
+            if (!file.type.startsWith("image/")) {
+                setError("Upload a valid image file");
+                return false;
             }
         }
 
         return true;
-
     }
+
 
 
 
@@ -47,17 +54,18 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
 
         const file = e.target.files?.[0]
 
-        if (!file || !validateFile(file)) return
+        if (fileType === "image" && !file.type.startsWith("image/")) {
+            setError("Upload a valid image file");
+            return false;
+        }
 
-        setUploading(true)
-        setError(null)
 
         try {
             const authRes = await fetch("/api/auth/imageKit-auth")
             const auth = await authRes.json()
 
 
-         const res=   await upload({
+            const res = await upload({
                 file,
                 fileName: file.name,
                 publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY!,
@@ -83,8 +91,8 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
             onSuccess(res)
 
         } catch (error) {
-console.error("uplaod failed",error)
-        }finally{
+            console.error("uplaod failed", error)
+        } finally {
             setUploading(false)
         }
     }
