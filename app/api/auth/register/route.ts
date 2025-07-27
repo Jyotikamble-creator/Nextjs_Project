@@ -6,8 +6,8 @@ import { error } from "console";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
-// const hashedPassword = await bcrypt.hash(password, 10);
-// await User.create({ email, password: hashedPassword });
+const hashedPassword = await bcrypt.hash(password, 10);
+await User.create({ email, password: hashedPassword });
 
 
 export async function POST(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         const existingUser = await User.findOne({ email })
 
        if (existingUser) {
-  return NextResponse.json({ error: "User already registered" }, { status: 400 });
+  return NextResponse.json({ error: "User already registered" }, { status: 201 });
 }
 
         // create user database

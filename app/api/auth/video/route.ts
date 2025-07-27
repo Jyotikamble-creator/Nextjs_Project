@@ -51,7 +51,7 @@ export async function POST(request: NextResponse) {
         transformation: {
             height: 1920,
             width: 1080,
-            quality: body.transformtion?.quality ?? 100, // Typo here too!
+            quality: body.transformation?.quality?? 100, // Typo here too!
         },
     };
 
