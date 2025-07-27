@@ -55,6 +55,11 @@ export async function POST(request: NextResponse) {
         },
     };
 
+    
     const newVideo = await Video.create(videoData);
     return NextResponse.json(newVideo);
 }
+// views: { type: Number, default: 0 },
+// likes: { type: Number, default: 0 },
+// uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+// duration: { type: String }, // store as "03:20" for example
