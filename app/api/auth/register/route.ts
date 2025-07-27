@@ -41,8 +41,8 @@ export async function POST(request: NextRequest) {
 
         // return succesful registretion
         return NextResponse.json(
-            { message: "user successfully registeerd" },
-            { status: 400 }
+            { message: "user successfully registered" },
+            { status: 201 }
         )
     } catch (error) {
         console.error("registretion error")
