@@ -1,4 +1,5 @@
 "use client"
+import { useRef, useState } from "react";
 import {
     ImageKitAbortError,
     ImageKitInvalidRequestError,
@@ -6,9 +7,6 @@ import {
     ImageKitUploadNetworkError,
     upload,
 } from "@imagekit/next";
-import { useRef, useState } from "react";
-
-
 
 interface FileUploadProps {
     onSuccess: (res: any) => void
@@ -17,20 +15,18 @@ interface FileUploadProps {
 }
 
 const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
-
     const [uploading, setUploading] = useState(false)
-
     const [error, setError] = useState<string | null>(null)
 
-
     // validation
-
     const validateFile = (file: File) => {
         if (fileType === "video") {
+
             if (!file.type.startsWith("video/")) {
                 setError("Upload a valid video file");
                 return false;
             }
+
             if (file.size > 100 * 1024 * 1024) {
                 setError("File size must be less than 100MB");
                 return false;
@@ -43,12 +39,8 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
                 return false;
             }
         }
-
         return true;
     }
-
-
-
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
@@ -59,11 +51,9 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
             return false;
         }
 
-
         try {
             const authRes = await fetch("/api/auth/imageKit-auth")
             const auth = await authRes.json()
-
 
             const res = await upload({
                 file,
@@ -72,8 +62,6 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
                 signature: auth.signature,
                 expire: auth.expire,
                 token: auth.token,
-
-
 
                 onProgress: (event) => {
                     if (event.lengthComputable && onProgress) {
@@ -84,24 +72,14 @@ const FileUpload = ({ onSuccess, onProgress, fileType }: FileUploadProps) => {
                     }
                 },
 
-
-
             })
-
             onSuccess(res)
-
         } catch (error) {
             console.error("uplaod failed", error)
         } finally {
             setUploading(false)
         }
     }
-
-
-
-
-
-
 
     return (
         <>

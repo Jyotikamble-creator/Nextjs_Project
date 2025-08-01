@@ -3,7 +3,6 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Navbar() {
-
     const router = useRouter();
     const [isAuthentication, setIsAuthentication] = useState(false);
 
@@ -26,6 +25,7 @@ export default function Navbar() {
 
         // navbar
         <nav className="w-full bg-blue-600 text-white px-4 py-3 shadow-md flex items-center justify-between">
+            {/* Logo and title */}
             <Link href="/" className="text-lg font-semibold">
                 🎥 MyApp
             </Link>
@@ -49,7 +49,5 @@ export default function Navbar() {
                 )}
             </div>
         </nav>
-
-
     )
 }
