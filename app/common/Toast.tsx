@@ -14,6 +14,8 @@ const Toast: React.FC<ToastProps> = ({
   duration = 3000,
 }) => {
   useEffect(() => {
+
+    // Automatically close the toast after the specified duration
     const timer = setTimeout(onClose, duration);
     return () => clearTimeout(timer);
   }, [onClose, duration]);
@@ -31,6 +33,7 @@ const Toast: React.FC<ToastProps> = ({
     <div className={`${baseClass} ${typeClass[type]}`}>
       {message}
     </div>
+    
   );
 };
 
