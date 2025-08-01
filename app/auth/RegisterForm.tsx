@@ -1,17 +1,13 @@
-// components/auth/registerform.tsx
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/router";
 import authService from "@/services/authService";
 
 export default function RegisterForm() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    
     email: "",
     password: ""
   });
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -40,11 +36,9 @@ export default function RegisterForm() {
   return (
     <form onSubmit={handleRegister} className="max-w-md mx-auto p-6 bg-white shadow-md rounded-md">
       <h2 className="text-2xl font-semibold mb-4 text-center">Register</h2>
-
       {error && <p className="text-red-500 mb-4">{error}</p>}
       {success && <p className="text-green-500 mb-4">{success}</p>}
 
-   
       <input
         type="email"
         name="email"
@@ -54,6 +48,7 @@ export default function RegisterForm() {
         onChange={handleChange}
         required
       />
+
       <input
         type="password"
         name="password"
@@ -63,9 +58,11 @@ export default function RegisterForm() {
         onChange={handleChange}
         required
       />
+
       <button type="submit" className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">
         Register
       </button>
+
     </form>
   );
 }
