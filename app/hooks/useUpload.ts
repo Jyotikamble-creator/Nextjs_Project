@@ -1,61 +1,74 @@
-import { useState } from "react";
-import { uploadVideo } from "@/services/videoService";
-import { getUploadAuthParams } from "@/services/imagekitService";
+"use client"
+
+import { useState } from "react"
+import axios from "axios"
+
+interface UploadMetadata {
+  title: string
+  description: string
+  category: string
+  tags: string[]
+  isPublic: boolean
+}
 
 export function useUpload() {
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
 
-  const handleUpload = async (
-    file: File,
-    metadata: { title: string; description: string }
-  ) => {
-    setUploading(true);
-    setError(null);
+  const uploadVideo = async (file: File, metadata: UploadMetadata) => {
+    setUploading(true)
+    setProgress(0)
 
     try {
-      const authParams = await getUploadAuthParams();
+      // Get ImageKit auth parameters
+      const { data: authData } = await axios.get("/api/imagekit-auth")
 
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("fileName", file.name);
-      formData.append("publicKey", authParams.publicKey);
-      formData.append("signature", authParams.authenticationParameters.signature);
-      formData.append("expire", authParams.authenticationParameters.expire);
-      formData.append("token", authParams.authenticationParameters.token);
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.readAsDataURL(file)
+      })
 
-      const imageKitUploadRes = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
-        method: "POST",
-        body: formData,
-        onUploadProgress: (e) => {
-          const percent = Math.round((e.loaded * 100) / e.total);
-          setProgress(percent);
+      // Upload to ImageKit
+      const formData = new FormData()
+      formData.append("file", base64)
+      formData.append("fileName", file.name)
+      formData.append("publicKey", authData.publicKey)
+      formData.append("signature", authData.authenticationParameters.signature)
+      formData.append("expire", authData.authenticationParameters.expire)
+      formData.append("token", authData.authenticationParameters.token)
+      formData.append("folder", "/videos")
+
+      const uploadResponse = await axios.post("https://upload.imagekit.io/api/v1/files/upload", formData, {
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
+          setProgress(percent)
         },
-      });
+      })
 
-      const resData = await imageKitUploadRes.json();
-
-      // Save video metadata to your DB
-      await uploadVideo({
+      // Save video metadata to database
+      await axios.post("/api/videos", {
         ...metadata,
-        videoUrl: resData.url,
-        thumbnailUrl: resData.thumbnailUrl || resData.url,
-      });
+        videoUrl: uploadResponse.data.url,
+        thumbnailUrl: uploadResponse.data.thumbnailUrl || uploadResponse.data.url,
+        fileId: uploadResponse.data.fileId,
+        size: file.size,
+      })
 
-    } catch (err: any) {
-      console.error("Upload failed", err);
-      setError("Upload failed");
+      setProgress(100)
+    } catch (error) {
+      console.error("Upload failed:", error)
+      throw error
     } finally {
-      setUploading(false);
-      setProgress(0);
+      setUploading(false)
+      setProgress(0)
     }
-  };
+  }
 
   return {
-    handleUpload,
+    uploadVideo,
     uploading,
     progress,
-    error,
-  };
+  }
 }
