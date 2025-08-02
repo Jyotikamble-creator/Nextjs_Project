@@ -1,49 +1,44 @@
-// get all the data from frontend
-// connecting to the database
-import { connectionToDatabase } from "@/lib/db";
-import User from "@/models/User";
-import { error } from "console";
-import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-
-// const hashedPassword = await bcrypt.hash(password, 10);
-// await User.create({ email, password: hashedPassword });
+import { connectionToDatabase } from "@/lib/db"
+import User from "@/models/User"
+import { type NextRequest, NextResponse } from "next/server"
+import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
-    // check if the request is a POST request
-    // validation
-    try {
-        const { email, password } = await request.json()
-        if (!email || !password) {
-            return NextResponse.json(
-                { error: "email and password are required" },
-                { status: 400 }
-            )
-        }
+  try {
+    const { email, password } = await request.json()
 
-        // exsiting user check
-        await connectionToDatabase()
-        const existingUser = await User.findOne({ email })
-        if (existingUser) {
-            return NextResponse.json({ error: "User already registered" }, { status: 201 });
-        }
-
-        // create user database
-        await User.create({
-            email, password
-        })
-
-        // return succesful registretion
-        return NextResponse.json(
-            { message: "user successfully registered" },
-            { status: 201 }
-        )
-    } catch (error) {
-        console.error("registretion error")
-        return NextResponse.json(
-            { error: "user already registered" },
-            { status: 400 }
-        )
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
+    if (password.length < 6) {
+      return NextResponse.json({ error: "Password must be at least 6 characters long" }, { status: 400 })
+    }
+
+    await connectionToDatabase()
+
+    const existingUser = await User.findOne({ email })
+    if (existingUser) {
+      return NextResponse.json({ error: "User already registered" }, { status: 400 })
+    }
+    // Hash the password before saving
+    const hashedPassword = await bcrypt.hash(password, 12)
+
+    const newUser = await User.create({
+      email,
+      password: hashedPassword, // Use hashed password
+    })
+
+    // Return a success response with the user ID and email
+    return NextResponse.json(
+      {
+        message: "User successfully registered",
+        user: { id: newUser._id, email: newUser.email },
+      },
+      { status: 201 }, 
+    )
+  } catch (error) {
+    console.error("Registration error:", error)
+    return NextResponse.json({ error: "Registration failed" }, { status: 500 })
+  }
 }
