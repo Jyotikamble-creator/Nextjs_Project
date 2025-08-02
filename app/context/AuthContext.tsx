@@ -1,28 +1,33 @@
-"use client";
-import { useSession, signOut } from "next-auth/react";
-import { createContext, useContext } from "react";
+"use client"
+
+import { useSession, signOut } from "next-auth/react"
+import { createContext, useContext, type ReactNode } from "react"
 
 interface AuthContextType {
-  user: any;
-  isLoggedIn: boolean;
-  logout: () => void;
+  user: any
+  isLoggedIn: boolean
+  logout: () => void
+  loading: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoggedIn: false,
-  logout: () => { },
-});
+  logout: () => {},
+  loading: true,
+})
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const { data: session } = useSession();
-  // session will be null if the user is not logged in
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession()
+
   const value = {
     user: session?.user,
     isLoggedIn: !!session,
-    logout: () => signOut(),
-  };
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+    logout: () => signOut({ callbackUrl: "/login" }),
+    loading: status === "loading",
+  }
 
-export const useAuth = () => useContext(AuthContext);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export const useAuth = () => useContext(AuthContext)
