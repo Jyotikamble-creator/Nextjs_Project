@@ -1,55 +1,30 @@
-import { useState } from "react";
-import axios from "axios";
-import ImageKit from "imagekit-javascript";
+"use client"
 
-const imagekit = new ImageKit({
-  publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY!,
-  urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL!,
-});
+import { createContext, useContext, useState, type ReactNode } from "react"
 
-export const useUpload = () => {
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<number>(0);
+interface UploadContextType {
+  progress: number
+  setProgress: (value: number) => void
+  uploading: boolean
+  setUploading: (value: boolean) => void
+}
 
-  const uploadVideo = async (
-    file: File,
-    title: string,
-    description: string,
-    thumbnailUrl: string
-  ) => {
-    try {
-      setUploading(true);
-      setProgress(0);
+const UploadContext = createContext<UploadContextType>({
+  progress: 0,
+  setProgress: () => {},
+  uploading: false,
+  setUploading: () => {},
+})
 
-      // Get auth params
-      const { data } = await axios.get("/api/imagekit-auth");
-      const authParams = data.authenticationParameters;
+export function UploadProvider({ children }: { children: ReactNode }) {
+  const [progress, setProgress] = useState(0)
+  const [uploading, setUploading] = useState(false)
 
-      // Upload to ImageKit
-      const res = await imagekit.upload({
-        file,
-        fileName: file.name,
-        ...authParams,
-        tags: ["video"],
-        onUploadProgress: (e) => setProgress(Math.round((e.loaded * 100) / e.total)),
-      });
+  return (
+    <UploadContext.Provider value={{ progress, setProgress, uploading, setUploading }}>
+      {children}
+    </UploadContext.Provider>
+  )
+}
 
-      // Save video metadata to backend
-      await axios.post("/api/video", {
-        title,
-        description,
-        videoUrl: res.url,
-        thumbnailUrl,
-      });
-
-      return res.url;
-    } catch (error) {
-      console.error("Upload error:", error);
-      throw error;
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return { uploadVideo, uploading, progress };
-};
+export const useUploadContext = () => useContext(UploadContext)
