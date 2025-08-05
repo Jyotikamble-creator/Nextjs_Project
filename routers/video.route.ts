@@ -1,15 +1,13 @@
-import express from "express";
-import { authenticate } from "../middleware/auth";
-import {
-  uploadVideo,
-  getVideos,
-  deleteVideo,
-} from "../controllers/video.controller";
 
-const router = express.Router();
+import express from "express"
+import { authenticate } from "../middleware/auth"
+import { uploadVideo, getVideos, getVideoById, deleteVideo } from "../controllers/video.controller"
 
-router.post("/upload", authenticate, uploadVideo);
-router.get("/", authenticate, getVideos);
-router.delete("/:id", authenticate, deleteVideo);
+const router = express.Router()
 
-export default router;
+router.post("/upload", authenticate, uploadVideo)
+router.get("/", getVideos) // Public route for all videos
+router.get("/:id", getVideoById) // Public route for single video
+router.delete("/:id", authenticate, deleteVideo)
+
+export default router
