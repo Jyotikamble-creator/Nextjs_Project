@@ -11,7 +11,7 @@ export async function GET() {
         }
         )
         return Response.json({ authenticationParameters, publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY })
-        console.log("ImageKit Auth Params generated");
+        
 
     }
     catch (error) {
