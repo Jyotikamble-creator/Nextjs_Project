@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
-      return NextResponse.json({ error: "User already registered" }, { status: 400 })
+      return NextResponse.json({ error: "User already registered" }, { status: 201 })
     }
     // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 12)
