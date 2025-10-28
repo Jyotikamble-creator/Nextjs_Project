@@ -1,62 +1,30 @@
-"use client"
+import { NextResponse } from "next/server"
+import { connectionToDatabase } from "@/lib/db"
+import Video from "@/models/Video"
 
-import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
-import VideoPlayer from "@/components/video/videoplayer"
-import { fetchVideoById } from "@/services/videoservices"
-import Loader from "@/common/loader" // Assuming this component exists
+// Server-side GET handler to return a video by id: /api/auth/video?id=...
+export async function GET(req: Request) {
+  try {
+  await connectionToDatabase()
 
-export default function VideoDetailPage() {
-  const { id } = useParams()
-  const [video, setVideo] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+    const url = new URL(req.url)
+    const id = url.searchParams.get("id")
 
-  useEffect(() => {
-    if (id) {
-      fetchVideoById(id as string)
-        .then((data) => {
-          setVideo(data)
-        })
-        .catch((err) => {
-          console.error("Failed to fetch video:", err)
-          setError("Failed to load video. Please try again later.")
-        })
-        .finally(() => {
-          setLoading(false)
-        })
+    if (!id) {
+      return NextResponse.json({ message: "Missing id query parameter" }, { status: 400 })
     }
-  }, [id])
 
-  if (loading) {
-    return <Loader fullscreen message="Loading video..." />
+    const video = await Video.findById(id).populate("uploader", "name email")
+
+    if (!video) return NextResponse.json({ message: "Video not found" }, { status: 404 })
+
+    // increment views
+    video.views = (video.views || 0) + 1
+    await video.save()
+
+    return NextResponse.json(video)
+  } catch (err: any) {
+    console.error("API GET /api/auth/video error:", err)
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-red-500">{error}</p>
-      </div>
-    )
-  }
-
-  if (!video) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Video not found.</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="container mx-auto py-8">
-      <VideoPlayer src={video.videoUrl} title={video.title} poster={video.thumbnailUrl} />
-      <div className="mt-8 p-4 bg-white shadow-lg rounded-lg">
-        <h2 className="text-2xl font-bold mb-2">{video.title}</h2>
-        <p className="text-gray-600 mb-4">Uploader: {video.uploader?.name || "Unknown"}</p>
-        <p className="text-gray-700">{video.description}</p>
-        {/* Add more video details like views, likes, etc. */}
-      </div>
-    </div>
-  )
 }
