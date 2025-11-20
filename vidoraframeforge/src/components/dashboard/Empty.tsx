@@ -15,10 +15,10 @@ export const EmptyState = ({ onUploadClick }: EmptyStateProps) => {
 
         <div className="space-y-2">
           <h3 className="text-xl font-bold text-white">
-            You haven't uploaded any videos yet
+            You haven&apos;t uploaded any videos yet
           </h3>
           <p className="text-gray-400 text-sm">
-            Click 'Upload Video' to get started and share your content with the world.
+            Click &apos;Upload Video&apos; to get started and share your content with the world.
           </p>
         </div>
 

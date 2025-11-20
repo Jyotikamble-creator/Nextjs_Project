@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Video } from "@/types/video";
+import { Video } from "@/types/video/video";
 import { formatViews, formatTimeAgo } from "@/lib/utils";
 
 interface VideoDescriptionProps {

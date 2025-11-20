@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
     const userId = searchParams.get("userId")
 
-    const query: any = { isPublic: true }
+    const query: Record<string, unknown> = { isPublic: true }
 
     if (category && category !== "all") {
       query.category = category

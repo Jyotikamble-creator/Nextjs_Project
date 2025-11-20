@@ -1,8 +1,8 @@
-export const logInfo = (message: string, data?: any) => {
+export const logInfo = (message: string, data?: unknown) => {
   console.log(`[INFO] ${message}`, data || "");
 };
 
-export const logError = (message: string, error?: any) => {
+export const logError = (message: string, error?: unknown) => {
   console.error(`[ERROR] ${message}`, error || "");
 };
 

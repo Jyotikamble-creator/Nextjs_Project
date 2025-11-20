@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     await video.save()
 
     return NextResponse.json(video)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("API GET /api/auth/video error:", err)
     return NextResponse.json({ message: "Internal server error" }, { status: 500 })
   }

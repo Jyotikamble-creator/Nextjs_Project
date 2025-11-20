@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { RelatedVideo } from "@/types/video";
+import { RelatedVideo } from "@/types/video/video";
 import { formatViews, formatTimeAgo } from "@/lib/utils";
 
 interface UpNextSidebarProps {
@@ -19,7 +19,7 @@ export const UpNextSidebar = ({ videos }: UpNextSidebarProps) => {
             href={`/watch/${video.id}`}
             className="flex gap-3 group hover:bg-white/5 rounded-lg p-2 transition-colors"
           >
-            <div className="relative w-40 aspect-video rounded-lg overflow-hidden flex-shrink-0 bg-gray-800">
+            <div className="relative w-40 aspect-video rounded-lg overflow-hidden shrink-0 bg-gray-800">
               <Image
                 src={video.thumbnail}
                 alt={video.title}

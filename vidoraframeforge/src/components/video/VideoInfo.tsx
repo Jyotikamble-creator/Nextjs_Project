@@ -1,6 +1,6 @@
 "use client"
 
-import { Video } from "@/types/video"
+import { Video } from "@/types/video/video"
 import { Eye, ThumbsUp, MessageCircle, Share2 } from "lucide-react"
 
 interface VideoInfoProps {

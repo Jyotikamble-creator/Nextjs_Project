@@ -49,9 +49,13 @@ export function useUpload() {
 
       setProgress(100)
       return uploadResponse.data.url
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Upload failed:", err)
-      setError(err.response?.data?.error || "Upload failed")
+      let errorMessage = "Upload failed"
+      if (axios.isAxiosError(err) && err.response?.data?.error) {
+        errorMessage = err.response.data.error
+      }
+      setError(errorMessage)
       throw err
     } finally {
       setUploading(false)

@@ -11,11 +11,9 @@ interface DecodedToken {
   exp: number;
 }
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: DecodedToken;
-    }
+declare module "express-serve-static-core" {
+  interface Request {
+    user?: DecodedToken;
   }
 }
 

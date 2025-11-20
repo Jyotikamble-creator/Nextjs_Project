@@ -2,7 +2,7 @@
 
 import { ThumbsUp, ThumbsDown, Share2, BookmarkPlus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Video } from "@/types/video";
+import { Video } from "@/types/video/video";
 import { formatViews, formatSubscribers } from "@/lib/utils";
 
 interface VideoInfoProps {
@@ -17,7 +17,7 @@ export const VideoInfo = ({ video }: VideoInfoProps) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
+            <div className="w-12 h-12 rounded-full bg-linear-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
               {video.creator.avatar ? (
                 <img
                   src={video.creator.avatar}

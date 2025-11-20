@@ -1,6 +1,6 @@
 "use client"
 
-import { Video } from "@/types/video"
+import { Video } from "@/types/video/video"
 import VideoCard from "./VideoCard"
 
 interface VideoGridProps {

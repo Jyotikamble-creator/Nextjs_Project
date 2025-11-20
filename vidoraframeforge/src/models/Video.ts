@@ -12,7 +12,7 @@ export interface IVideo {
   description: string
   videoUrl: string
   thumbnailUrl: string
-  uploader: mongoose.Types.ObjectId | any // reference to User
+  uploader: mongoose.Types.ObjectId // reference to User
   controls?: boolean
   createdAt?: Date
   updatedAt?: Date

@@ -1,14 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth } from "@/hooks/useauth"
+import { useAuth } from "@/hooks/useAuth"
 import VideoCard from "@/components/video/VideoCard"
-import { fetchUserVideos } from "@/services/videoservices"
-import Loader from "@/common/loader"
+import { fetchUserVideos } from "@/services/videoService"
+import Loader from "@/components/common/Loader"
+import { IVideo } from "@/models/Video"
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth()
-  const [videos, setVideos] = useState([])
+  const [videos, setVideos] = useState<IVideo[]>([])
   const [videosLoading, setVideosLoading] = useState(true)
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Dashboard() {
         <Loader message="Loading your videos..." />
       ) : videos.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {videos.map((video: any) => (
+          {videos.map((video) => (
             <VideoCard
               key={video._id}
               video={video}

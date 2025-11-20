@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 export function Footer() {
   return (
     <footer className="bg-gray-900 text-white py-8">
@@ -13,7 +15,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Explore</h4>
             <ul className="space-y-2 text-gray-400">
-              <li><a href="/" className="hover:text-white">Home</a></li>
+              <li><Link href="/" className="hover:text-white">Home</Link></li>
               <li><a href="/videos" className="hover:text-white">Videos</a></li>
               <li><a href="/categories" className="hover:text-white">Categories</a></li>
             </ul>
@@ -39,7 +41,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; 2024 Streamify. All rights reserved.</p>
+          <p>&copy; 2024 VidoraFrameForge All rights reserved.</p>
         </div>
       </div>
     </footer>

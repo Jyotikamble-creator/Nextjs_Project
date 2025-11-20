@@ -2,9 +2,10 @@
 
 import { useSession, signOut } from "next-auth/react"
 import { createContext, useContext, type ReactNode } from "react"
+import { IUser } from "@/models/User"
 
 interface AuthContextType {
-  user: any
+  user: IUser | null
   isLoggedIn: boolean
   logout: () => void
   loading: boolean
