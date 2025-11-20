@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CommentItem } from "./CommentItem";
-import { Comment } from "@/types/video";
+import CommentItem from "./CommentItem";
+import { Comment } from "@/types/video/video";
 
 interface CommentSectionProps {
   comments: Comment[];
@@ -24,7 +24,7 @@ export const CommentSection = ({ comments, commentCount }: CommentSectionProps) 
 
       {/* Add Comment */}
       <form onSubmit={handleSubmit} className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold flex-shrink-0">
+        <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold shrink-0">
           U
         </div>
         <input
@@ -39,7 +39,7 @@ export const CommentSection = ({ comments, commentCount }: CommentSectionProps) 
       {/* Comments List */}
       <div className="space-y-6">
         {comments.map((comment) => (
-          <CommentItem key={comment.id} comment={comment} />
+          <CommentItem key={comment._id} comment={comment} />
         ))}
       </div>
     </div>

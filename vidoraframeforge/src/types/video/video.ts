@@ -1,24 +1,25 @@
 export interface Video {
-  id: string;
+  _id: string;
   title: string;
   description: string;
-  thumbnail: string;
-  videoUrl?: string;
-  creator: {
-    id: string;
+  thumbnailUrl: string;
+  videoUrl: string;
+  uploader: {
+    _id: string;
     name: string;
-    avatar: string;
-    subscribers: number;
+    email: string;
   };
-  views: number;
-  likes: number;
-  uploadedAt: Date;
+  views?: number;
+  likes?: number;
+  createdAt: Date;
+  updatedAt: Date;
   tags?: string[];
   category?: string;
+  comments?: Comment[];
 }
 
 export interface Comment {
-  id: string;
+  _id: string;
   author: {
     name: string;
     avatar: string;
@@ -30,9 +31,9 @@ export interface Comment {
 }
 
 export interface RelatedVideo {
-  id: string;
+  _id: string;
   title: string;
-  thumbnail: string;
+  thumbnailUrl: string;
   creator: string;
   views: number;
   uploadedAt: Date;

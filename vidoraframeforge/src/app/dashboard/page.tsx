@@ -1,10 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/context/AuthContext"
 import VideoCard from "@/components/video/VideoCard"
 import { fetchUserVideos } from "@/services/videoService"
-import Loader from "@/app/common/Loader"
+import Loader from "@/components/common/Loader"
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth()

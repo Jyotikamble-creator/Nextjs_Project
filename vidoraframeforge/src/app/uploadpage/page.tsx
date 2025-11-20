@@ -1,4 +1,4 @@
-use client";
+"use client"
 
 import { useState } from "react";
 import { UploadHeader } from "@/components/upload/UploadHeader";

@@ -1,9 +1,9 @@
 
 "use client"
 
-import { useAuth } from "@/hooks/useAuth"
-import FileUpload from "@/app/components/FileUpload"
-import Loader from "@/app/common/Loader"
+import { useAuth } from "@/context/AuthContext"
+import FileUpload from "@/components/FileUpload"
+import Loader from "@/components/common/Loader"
 
 export default function UploadPage() {
   const { isAuthenticated, loading } = useAuth()

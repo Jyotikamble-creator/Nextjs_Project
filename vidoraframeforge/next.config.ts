@@ -8,7 +8,6 @@
 
 const nextConfig = {
   images: {
-    domains: ["ik.imagekit.io"], // Add your ImageKit domain
     remotePatterns: [
       {
         protocol: "https",
@@ -26,9 +25,6 @@ const nextConfig = {
   },
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
-  },
-  eslint: {
-    ignoreDuringBuilds: true,
   },
   typescript: {
     ignoreBuildErrors: true,

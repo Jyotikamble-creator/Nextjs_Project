@@ -1,18 +1,18 @@
 "use client";
 
 import { ThumbsUp, MessageCircle } from "lucide-react";
-import { Comment } from "@/types/video";
-import { formatTimeAgo } from "@/lib/utils";
+import { Comment } from "@/types/video/video";
+import { formatTimeAgo } from "@/lib/utils/formatTimeAgo";
 
 interface CommentItemProps {
   comment: Comment;
 }
 
-export const CommentItem = ({ comment }: CommentItemProps) => {
+const CommentItem = ({ comment }: CommentItemProps) => {
   return (
     <div className="flex gap-3">
-      <div className="flex-shrink-0">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
+      <div className="shrink-0">
+        <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold text-sm">
           {comment.author.avatar ? (
             <img
               src={comment.author.avatar}
@@ -51,3 +51,5 @@ export const CommentItem = ({ comment }: CommentItemProps) => {
     </div>
   );
 };
+
+export default CommentItem;

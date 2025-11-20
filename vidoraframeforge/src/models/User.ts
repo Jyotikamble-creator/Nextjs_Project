@@ -46,8 +46,7 @@ const userSchema = new Schema<IUser>(
   },
 )
 
-// Index for better performance
-userSchema.index({ email: 1 })
+// Removed duplicate index - unique: true already creates an index
 
 const User = models?.User || model<IUser>("User", userSchema)
 export default User

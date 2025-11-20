@@ -1,17 +1,18 @@
-import { useRouter } from "next/router";
+"use client"
+
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { fetchVideoById } from "@/services/videoService";
 import VideoPlayer from "@/components/video/VideoPlayer";
 
-export default function VideoDetailPage() {
-  const { query } = useRouter();
+export default function VideoDetailPage({ params }: { params: { id: string } }) {
   const [video, setVideo] = useState(null);
 
   useEffect(() => {
-    if (query.id) {
-      fetchVideoById(query.id as string).then(setVideo);
+    if (params.id) {
+      fetchVideoById(params.id).then(setVideo);
     }
-  }, [query.id]);
+  }, [params.id]);
 
   if (!video) return <p>Loading...</p>;
 

@@ -5,10 +5,10 @@ import bcrypt from "bcryptjs"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const { name, email, password } = await request.json()
 
-    if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 })
     }
 
     if (password.length < 6) {
@@ -19,12 +19,13 @@ export async function POST(request: NextRequest) {
 
     const existingUser = await User.findOne({ email })
     if (existingUser) {
-      return NextResponse.json({ error: "User already registered" }, { status: 201 })
+      return NextResponse.json({ error: "User already registered" }, { status: 409 })
     }
     // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 12)
 
     const newUser = await User.create({
+      name,
       email,
       password: hashedPassword, // Use hashed password
     })
