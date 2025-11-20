@@ -12,6 +12,7 @@ export interface IVideo {
   description: string
   videoUrl: string
   thumbnailUrl: string
+  uploader: mongoose.Types.ObjectId | any // reference to User
   controls?: boolean
   createdAt?: Date
   updatedAt?: Date
@@ -29,6 +30,7 @@ const videoSchema = new Schema<IVideo>(
     description: { type: String, required: true },
     videoUrl: { type: String, required: true },
     thumbnailUrl: { type: String, required: true },
+    uploader: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     controls: { type: Boolean, default: true },
     transformation: {
       height: { type: Number, default: VIDEO_DIMENSIONS.height }, // Fixed typo

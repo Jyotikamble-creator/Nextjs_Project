@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useauth"
-import VideoCard from "@/components/video/videocard"
+import VideoCard from "@/components/video/VideoCard"
 import { fetchUserVideos } from "@/services/videoservices"
 import Loader from "@/common/loader"
 
@@ -44,12 +44,7 @@ export default function Dashboard() {
           {videos.map((video: any) => (
             <VideoCard
               key={video._id}
-              id={video._id}
-              title={video.title}
-              thumbnailUrl={video.thumbnailUrl}
-              uploader={video.uploader}
-              views={video.views || 0}
-              createdAt={video.createdAt}
+              video={video}
             />
           ))}
         </div>
