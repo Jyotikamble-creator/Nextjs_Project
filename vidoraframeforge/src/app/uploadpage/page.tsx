@@ -6,7 +6,7 @@ import { FileUploadZone } from "@/components/upload/FileUploadZone";
 import { UploadProgress } from "@/components/upload/UploadProgress";
 import { VideoDetailsForm } from "@/components/upload/VideoDetailsForm";
 import { ThumbnailSelector } from "@/components/upload/ThumbnailSelector";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/common/Button";
 import { VideoUpload, ThumbnailOption } from "@/types/upload";
 
 // Sample thumbnail options

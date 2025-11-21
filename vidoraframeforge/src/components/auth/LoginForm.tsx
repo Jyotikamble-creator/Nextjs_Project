@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { Input } from "@/components/ui/uploadpage/Input";
-import { Button } from "@/components/ui/common/Button";
+import { Input } from "@/components/common/Input";
+import { Button } from "@/components/common/Button";
 import { SocialLoginButtons } from "./SocialLoginButtons";
 import { LoginFormData, LoginFormErrors } from "@/types/auth/auth";
 import {

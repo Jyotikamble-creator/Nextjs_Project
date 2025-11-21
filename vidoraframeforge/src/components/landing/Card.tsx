@@ -1,49 +1,89 @@
-import React from 'react';
+import { Play, Upload, Users, TrendingUp } from 'lucide-react';
+
+const featureCardClasses = "bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-105";
+const iconContainerClasses = "w-12 h-12 rounded-xl flex items-center justify-center mb-4";
+const statNumberClasses = "text-3xl font-bold text-white mb-2";
+
+const features = [
+  {
+    icon: Upload,
+    iconGradient: "bg-linear-to-r from-blue-500 to-purple-500",
+    title: "Easy Upload",
+    description: "Upload your videos in seconds with our intuitive interface and powerful processing tools."
+  },
+  {
+    icon: Users,
+    iconGradient: "bg-linear-to-r from-green-500 to-blue-500",
+    title: "Global Community",
+    description: "Connect with creators worldwide and build your audience with our engaged community."
+  },
+  {
+    icon: TrendingUp,
+    iconGradient: "bg-linear-to-r from-purple-500 to-pink-500",
+    title: "Analytics & Growth",
+    description: "Track your performance with detailed analytics and grow your channel effectively."
+  }
+];
+
+const stats = [
+  { number: "10M+", label: "Videos Uploaded" },
+  { number: "5M+", label: "Active Users" },
+  { number: "500K+", label: "Creators" },
+  { number: "24/7", label: "Support" }
+];
 
 export default function Home() {
   return (
-    <div className="container mx-auto px-4 py-16">
-      {/* Welcome Section */}
-      <div className="text-center mb-16">
-        <h1 className="text-5xl font-bold text-light-text mb-4">
-          Welcome to <span className="text-primary-blue">VidoraFrameForge</span>
-        </h1>
-        <p className="text-xl text-subtle-text mb-8">
-          Discover fun and engaging games to challenge your mind and enjoy your time!
-        </p>
-        <div className="flex justify-center gap-4">
-          <button className="bg-primary-blue hover:bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-300">
-            Explore Games
-          </button>
-          <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-300">
-            Get Started
-          </button>
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Hero Section */}
+      <div className="container mx-auto px-4 py-20">
+        <div className="text-center mb-20">
+          <div className="inline-flex items-center gap-2 bg-purple-500/20 text-purple-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
+            <TrendingUp className="w-4 h-4" />
+            The Future of Video Sharing
+          </div>
+          <h1 className="text-6xl md:text-7xl font-bold text-white mb-6 leading-tight">
+            Share Your <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Stories</span>
+            <br />With The World
+          </h1>
+          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Join millions of creators sharing their passion through stunning videos.
+            Upload, discover, and connect with content that inspires you.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <button className="group bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 hover:shadow-purple-500/25">
+              <Upload className="w-5 h-5 inline mr-2" />
+              Start Creating
+            </button>
+            <button className="group bg-white/10 hover:bg-white/20 text-white font-bold py-4 px-8 rounded-xl border border-white/20 backdrop-blur-sm transition-all duration-300 transform hover:scale-105">
+              <Play className="w-5 h-5 inline mr-2" />
+              Explore Videos
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Popular Games Section */}
-      <div className="mb-16">
-        <h2 className="text-3xl font-bold text-light-text text-center mb-8">Popular Games</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-card-bg p-6 rounded-lg shadow-xl text-center hover:shadow-2xl transition duration-300">
-            <div className="text-4xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold text-light-text mb-2">Word Guess</h3>
-            <p className="text-subtle-text">Guess the hidden word in six tries.</p>
-          </div>
-          <div className="bg-card-bg p-6 rounded-lg shadow-xl text-center hover:shadow-2xl transition duration-300">
-            <div className="text-4xl mb-4">🧠</div>
-            <h3 className="text-xl font-semibold text-light-text mb-2">Memory Match</h3>
-            <p className="text-subtle-text">Test your memory by matching pairs.</p>
-          </div>
-          <div className="bg-card-bg p-6 rounded-lg shadow-xl text-center hover:shadow-2xl transition duration-300">
-            <div className="text-4xl mb-4">➕</div>
-            <h3 className="text-xl font-semibold text-light-text mb-2">Math Quiz</h3>
-            <p className="text-subtle-text">Solve quick-fire math problems.</p>
-          </div>
-          <div className="bg-card-bg p-6 rounded-lg shadow-xl text-center hover:shadow-2xl transition duration-300">
-            <div className="text-4xl mb-4">⌨️</div>
-            <h3 className="text-xl font-semibold text-light-text mb-2">Typing Test</h3>
-            <p className="text-subtle-text">Improve your typing speed and accuracy.</p>
+        {/* Features Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+          {features.map((feature, index) => (
+            <div key={index} className={featureCardClasses}>
+              <div className={`${iconContainerClasses} ${feature.iconGradient}`}>
+                <feature.icon className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">{feature.title}</h3>
+              <p className="text-gray-400">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Stats Section */}
+        <div className="bg-linear-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {stats.map((stat, index) => (
+              <div key={index}>
+                <div className={statNumberClasses}>{stat.number}</div>
+                <div className="text-gray-400">{stat.label}</div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
