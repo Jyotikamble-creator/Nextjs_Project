@@ -4,33 +4,6 @@ const featureCardClasses = "bg-white/5 backdrop-blur-lg rounded-2xl p-8 border b
 const iconContainerClasses = "w-12 h-12 rounded-xl flex items-center justify-center mb-4";
 const statNumberClasses = "text-3xl font-bold text-white mb-2";
 
-const features = [
-  {
-    icon: Upload,
-    iconGradient: "bg-linear-to-r from-blue-500 to-purple-500",
-    title: "Easy Upload",
-    description: "Upload your videos in seconds with our intuitive interface and powerful processing tools."
-  },
-  {
-    icon: Users,
-    iconGradient: "bg-linear-to-r from-green-500 to-blue-500",
-    title: "Global Community",
-    description: "Connect with creators worldwide and build your audience with our engaged community."
-  },
-  {
-    icon: TrendingUp,
-    iconGradient: "bg-linear-to-r from-purple-500 to-pink-500",
-    title: "Analytics & Growth",
-    description: "Track your performance with detailed analytics and grow your channel effectively."
-  }
-];
-
-const stats = [
-  { number: "10M+", label: "Videos Uploaded" },
-  { number: "5M+", label: "Active Users" },
-  { number: "500K+", label: "Creators" },
-  { number: "24/7", label: "Support" }
-];
 
 export default function Home() {
   return (

@@ -13,7 +13,7 @@ export default function Header() {
         {/* Logo */}
         <div className="flex items-center space-x-4">
          <div>
-          <image src="img/logo.png">
+          <img src="/img/logo.png" alt="VidoraFrameForge Logo" className="w-8 h-8" />
           </div>
           <h1 className="text-2xl font-bold text-white">VIDORAFRAMEFORGE</h1>
         </div>
