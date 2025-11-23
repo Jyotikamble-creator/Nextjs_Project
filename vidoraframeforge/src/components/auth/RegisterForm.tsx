@@ -91,7 +91,7 @@ export default function RegisterForm() {
     <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-md">
       <h2 className="text-2xl font-bold text-center mb-6">Create Account</h2>
 
-      <SocialLoginButtons />
+      <SocialLoginButtons onGoogleLogin={() => {}} onAppleLogin={() => {}} />
 
       <div className="mt-6 mb-4 text-center text-gray-500">or</div>
 

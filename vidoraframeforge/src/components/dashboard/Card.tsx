@@ -39,7 +39,7 @@ export const VideoCard = ({ video, onMenuClick }: VideoCardProps) => {
           </Link>
           <button
             onClick={() => onMenuClick(video.id)}
-            className="p-1 hover:bg-white/10 rounded transition-colors flex-shrink-0"
+            className="p-1 hover:bg-white/10 rounded transition-colors shrink-0"
           >
             <MoreVertical className="w-5 h-5 text-gray-400" />
           </button>

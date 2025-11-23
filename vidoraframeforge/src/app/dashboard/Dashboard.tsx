@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useAuth } from "@/hooks/useAuth"
+import { useAuth } from "@/context/AuthContext"
 import VideoCard from "@/components/video/VideoCard"
 import { fetchUserVideos } from "@/server/services/videoService"
 import Loader from "@/components/common/Loader"

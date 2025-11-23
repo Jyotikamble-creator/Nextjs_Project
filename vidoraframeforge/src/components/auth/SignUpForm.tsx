@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { TermsCheckbox } from "./TermsCheckbox";
 import { SocialAuthButtons } from "./SocialAuthButtons";
-import { SignUpFormData, FormErrors } from "@/types/auth";
+import { SignUpFormData, FormErrors } from "@/types/auth/auth";
 import {
   validateUsername,
   validateEmail,
   validatePassword,
   validateConfirmPassword,
   validateTerms,
-} from "@/server/validations";
+} from "@/server/auth-config/validation";
 
 export const SignUpForm = () => {
   const [formData, setFormData] = useState<SignUpFormData>({

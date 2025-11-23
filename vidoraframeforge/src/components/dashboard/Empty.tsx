@@ -25,7 +25,7 @@ export const EmptyState = ({ onUploadClick }: EmptyStateProps) => {
         <Button
           variant="primary"
           size="lg"
-          icon={<Upload className="w-5 h-5" />}
+          // icon={<Upload className="w-5 h-5" />}
           onClick={onUploadClick}
         >
           Upload Video

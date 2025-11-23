@@ -1,8 +1,36 @@
-import { Play, Upload, Users, TrendingUp } from 'lucide-react';
+import { Play, Upload, Users, TrendingUp, Video, Share, Heart } from 'lucide-react';
 
 const featureCardClasses = "bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10 hover:bg-white/10 transition-all duration-300 transform hover:scale-105";
 const iconContainerClasses = "w-12 h-12 rounded-xl flex items-center justify-center mb-4";
 const statNumberClasses = "text-3xl font-bold text-white mb-2";
+
+const features = [
+  {
+    icon: Upload,
+    title: "Easy Upload",
+    description: "Upload your videos with just a few clicks. Support for all major formats.",
+    iconGradient: "bg-gradient-to-r from-purple-500 to-purple-700"
+  },
+  {
+    icon: Share,
+    title: "Share Everywhere",
+    description: "Share your content across all platforms and reach your audience.",
+    iconGradient: "bg-gradient-to-r from-pink-500 to-pink-700"
+  },
+  {
+    icon: Users,
+    title: "Build Community",
+    description: "Connect with viewers, build your following, and grow your channel.",
+    iconGradient: "bg-gradient-to-r from-blue-500 to-blue-700"
+  }
+];
+
+const stats = [
+  { number: "10M+", label: "Active Users" },
+  { number: "50M+", label: "Videos Uploaded" },
+  { number: "1B+", label: "Hours Watched" },
+  { number: "180+", label: "Countries" }
+];
 
 
 export default function Home() {

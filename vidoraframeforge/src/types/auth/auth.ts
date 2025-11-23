@@ -6,12 +6,26 @@ export interface SignUpFormData {
   agreeToTerms: boolean;
 }
 
+export interface RegisterFormData {
+  name: string;
+  email: string;
+  password: string;
+}
+
 export interface FormErrors {
   username?: string;
+  name?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
   agreeToTerms?: string;
+}
+
+export interface RegisterFormErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  general?: string;
 }
 
 export interface LoginFormData {

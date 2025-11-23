@@ -1,5 +1,5 @@
 import { UserVideo } from "@/types/dashboard";
-import { VideoCard } from "./VideoCard";
+import { VideoCard } from "../dashboard/Card";
 
 interface VideoGridProps {
   videos: UserVideo[];

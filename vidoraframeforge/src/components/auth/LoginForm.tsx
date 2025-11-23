@@ -10,7 +10,7 @@ import { LoginFormData, LoginFormErrors } from "@/types/auth/auth";
 import {
   validateEmailOrUsername,
   validateLoginPassword,
-} from "@/server/validations";
+} from "@/server/auth-config/validation";
 
 export const LoginForm = () => {
   const [formData, setFormData] = useState<LoginFormData>({

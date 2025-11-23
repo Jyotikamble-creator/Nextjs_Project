@@ -1,5 +1,5 @@
 import Header from "@/components/landing/Header";
-import { VideoPlayer } from "@/components/video/VideoPlayer";
+import VideoPlayer from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
 import { VideoDescription } from "@/components/video/VideoDescription";
 import { CommentSection } from "@/components/video/CommentSection";
@@ -95,7 +95,7 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-4">
-            <VideoPlayer thumbnail={video.thumbnail} title={video.title} />
+            <VideoPlayer poster={video.thumbnailUrl} title={video.title} />
             <VideoInfo video={video} />
             <VideoDescription video={video} />
             <CommentSection comments={comments} commentCount={2458} />

@@ -29,7 +29,7 @@ export default function FileUpload() {
     try {
       await uploadVideo(file, {
         ...metadata,
-        tags: metadata.tags.split(",").map(tag => tag.trim())
+        // tags: metadata.tags ? metadata.tags.split(",").map(tag => tag.trim()) : []
       })
       // Reset form
       setFile(null)
