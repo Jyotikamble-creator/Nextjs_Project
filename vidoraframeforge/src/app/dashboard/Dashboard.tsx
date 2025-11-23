@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/hooks/useAuth"
 import VideoCard from "@/components/video/VideoCard"
-import { fetchUserVideos } from "@/services/videoService"
+import { fetchUserVideos } from "@/server/services/videoService"
 import Loader from "@/components/common/Loader"
-import { IVideo } from "@/models/Video"
+import { IVideo } from "@/server/models/Video"
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth()

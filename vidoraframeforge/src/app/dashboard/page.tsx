@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import VideoCard from "@/components/video/VideoCard"
-import { fetchUserVideos } from "@/services/videoService"
+import { fetchUserVideos } from "@/server/services/videoService"
 import Loader from "@/components/common/Loader"
-import { IVideo } from "@/models/Video"
+import { IVideo } from "@/server/models/Video"
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth()
@@ -13,8 +13,8 @@ export default function Dashboard() {
   const [videosLoading, setVideosLoading] = useState(true)
 
   useEffect(() => {
-    if (isAuthenticated && user?.email) {
-      fetchUserVideos(user.email)
+    if (isAuthenticated && user?.id) {
+      fetchUserVideos(user.id)
         .then(setVideos)
         .catch(console.error)
         .finally(() => setVideosLoading(false))

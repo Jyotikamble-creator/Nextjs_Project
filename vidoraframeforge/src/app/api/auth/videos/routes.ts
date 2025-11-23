@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectionToDatabase } from "@/lib/db"
-import Video from "@/models/Video"
-import { authOptions } from "@/lib/auth"
+import { connectionToDatabase } from "@/server/db"
+import Video from "@/server/models/Video"
+import { authOptions } from "@/server/auth-config/auth"
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,19 +13,26 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
     const userId = searchParams.get("userId")
 
-    const query: Record<string, unknown> = { isPublic: true }
+    const query: Record<string, unknown> = {}
+
+    // Only filter by isPublic if not fetching user's own videos
+    if (!userId) {
+      query.isPublic = true
+    }
 
     if (category && category !== "all") {
       query.category = category
     }
 
     if (search) {
-      query.$text = { $search: search }
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } }
+      ]
     }
 
     if (userId) {
       query.uploader = userId
-      delete query.isPublic // Show all videos for the user
     }
 
     const videos = await Video.find(query).populate("uploader", "name avatar").sort({ createdAt: -1 }).limit(50)

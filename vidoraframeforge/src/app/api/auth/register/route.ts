@@ -1,5 +1,5 @@
-import { connectionToDatabase } from "@/lib/db"
-import User from "@/models/User"
+import { connectionToDatabase } from "@/server/db"
+import User from "@/server/models/User"
 import { type NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 

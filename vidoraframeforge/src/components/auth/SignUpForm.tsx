@@ -13,7 +13,7 @@ import {
   validatePassword,
   validateConfirmPassword,
   validateTerms,
-} from "@/lib/validations";
+} from "@/server/validations";
 
 export const SignUpForm = () => {
   const [formData, setFormData] = useState<SignUpFormData>({

@@ -21,7 +21,7 @@ export function useUpload() {
 
     try {
       // Get ImageKit auth parameters
-      const { data: authData } = await axios.get("/api/imagekit-auth")
+      const { data: authData } = await axios.get("/api/auth/imagekit-auth")
 
       // Upload to ImageKit
       const formData = new FormData()
@@ -40,7 +40,7 @@ export function useUpload() {
       })
 
       // Save video metadata to database
-      await axios.post("/api/video", {
+      await axios.post("/api/auth/videos", {
         title: metadata.title,
         description: metadata.description,
         videoUrl: uploadResponse.data.url,
@@ -62,8 +62,11 @@ export function useUpload() {
     }
   }
 
+  const uploadVideo = handleUpload
+
   return {
     handleUpload,
+    uploadVideo,
     uploading,
     progress,
     error,

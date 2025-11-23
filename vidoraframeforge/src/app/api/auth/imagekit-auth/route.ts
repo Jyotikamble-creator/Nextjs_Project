@@ -6,19 +6,17 @@ export async function GET() {
         // authenticationParameters={ token, expire, signature }
         const authenticationParameters = getUploadAuthParams({
             privateKey: process.env.IMAGEKIT_PRIVATE_KEY as string,
-            publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY as string,
-
-        }
-        )
-        return Response.json({ authenticationParameters, publicKey: process.env.NEXT_PUBLIC_PUBLIC_KEY })
+            publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY as string,
+        })
         
-
-    }
-    catch (error) {
-        return Response.json({
-            error: "authentication for imagekit failed"
-        },
-            { status: 500 }
-        )
+        return NextResponse.json({ 
+            authenticationParameters, 
+            publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY 
+        })
+    } catch (error) {
+        console.error("ImageKit auth error:", error)
+        return NextResponse.json({
+            error: "Authentication for ImageKit failed"
+        }, { status: 500 })
     }
 }

@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Video } from "@/types/video/video"
-import { IVideo } from "@/models/Video"
+import { IVideo } from "@/server/models/Video"
 
 interface VideoCardProps {
   video: Video | IVideo

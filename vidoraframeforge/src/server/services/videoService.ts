@@ -29,8 +29,8 @@ export const videoService = {
     return response.data
   },
 
-  async getUserVideos(email: string) {
-    const response = await axios.get(`/api/video?uploader=${email}`)
+  async getUserVideos(userId: string) {
+    const response = await axios.get(`/api/auth/videos?userId=${userId}`)
     return response.data
   },
 }
@@ -38,4 +38,4 @@ export const videoService = {
 export const { uploadVideo, getVideos, getVideoById, getUserVideos } = videoService
 export const fetchAllVideos = getVideos
 export const fetchVideoById = getVideoById
-export const fetchUserVideos = getUserVideos
+export const fetchUserVideos = (userId: string) => getUserVideos(userId)

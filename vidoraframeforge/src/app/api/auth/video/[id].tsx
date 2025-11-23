@@ -1,6 +1,6 @@
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { fetchVideoById } from "@/services/videoService";
+import { fetchVideoById } from "@/server/services/videoService";
 import VideoPlayer from "@/components/video/VideoPlayer";
 
 export default function VideoDetailPage() {

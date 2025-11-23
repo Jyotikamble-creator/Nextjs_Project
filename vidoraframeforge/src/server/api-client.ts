@@ -1,5 +1,5 @@
 // FIX: Complete the incomplete implementation
-import type { IVideo } from "@/models/Video"
+import type { IVideo } from "@/server/models/Video"
 
 type FetchOptions = {
   method?: "GET" | "POST" | "PUT" | "DELETE"
@@ -19,7 +19,7 @@ class ApiClient {
     }
 
     // FIX: Proper fetch implementation
-    const response = await fetch(`/api${endpoint}`, {
+    const response = await fetch(`/api/auth${endpoint}`, {
       method,
       headers: defaultHeaders,
       body: body ? JSON.stringify(body) : undefined,
@@ -41,6 +41,10 @@ class ApiClient {
       method: "POST",
       body: videoData,
     })
+  }
+
+  async getVideoById(id: string) {
+    return this.fetchApi(`/video?id=${id}`)
   }
 }
 

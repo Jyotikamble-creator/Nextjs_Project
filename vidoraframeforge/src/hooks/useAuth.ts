@@ -21,7 +21,7 @@ export function useUpload() {
 
     try {
       // Get ImageKit auth parameters
-      const { data: authData } = await axios.get("/api/imagekit-auth")
+      const { data: authData } = await axios.get("/api/auth/imagekit-auth")
 
       // Convert file to base64
       const base64 = await new Promise<string>((resolve) => {
@@ -48,7 +48,7 @@ export function useUpload() {
       })
 
       // Save video metadata to database
-      await axios.post("/api/videos", {
+      await axios.post("/api/auth/videos", {
         ...metadata,
         videoUrl: uploadResponse.data.url,
         thumbnailUrl: uploadResponse.data.thumbnailUrl || uploadResponse.data.url,

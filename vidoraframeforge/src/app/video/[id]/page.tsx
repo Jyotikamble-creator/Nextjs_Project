@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { fetchVideoById } from "@/services/videoService";
+import { fetchVideoById } from "@/server/services/videoService";
 import VideoPlayer from "@/components/video/VideoPlayer";
 
 export default function VideoDetailPage({ params }: { params: { id: string } }) {

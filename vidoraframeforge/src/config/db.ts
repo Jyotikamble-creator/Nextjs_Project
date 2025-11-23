@@ -1,7 +1,7 @@
 
 import mongoose from "mongoose"
 import dotenv from "dotenv"
-import { logInfo, logError } from "../utils/logger"
+import { logInfo, logError } from "../server/utils/logger"
 
 dotenv.config()
 

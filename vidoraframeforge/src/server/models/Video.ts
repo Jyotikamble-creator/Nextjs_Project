@@ -13,12 +13,19 @@ export interface IVideo {
   videoUrl: string
   thumbnailUrl: string
   uploader: mongoose.Types.ObjectId // reference to User
+  views?: number
+  likes?: number
+  tags?: string[]
+  category?: string
+  isPublic?: boolean
+  fileId?: string
+  duration?: number
+  size?: number
   controls?: boolean
   createdAt?: Date
   updatedAt?: Date
-  // FIX: Fixed typo
   transformation?: {
-    height: number // Fixed: was "heigh"
+    height: number
     width: number
     quality?: number
   }
@@ -31,9 +38,17 @@ const videoSchema = new Schema<IVideo>(
     videoUrl: { type: String, required: true },
     thumbnailUrl: { type: String, required: true },
     uploader: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    views: { type: Number, default: 0 },
+    likes: { type: Number, default: 0 },
+    tags: [{ type: String }],
+    category: { type: String },
+    isPublic: { type: Boolean, default: true },
+    fileId: { type: String },
+    duration: { type: Number, default: 0 },
+    size: { type: Number, default: 0 },
     controls: { type: Boolean, default: true },
     transformation: {
-      height: { type: Number, default: VIDEO_DIMENSIONS.height }, // Fixed typo
+      height: { type: Number, default: VIDEO_DIMENSIONS.height },
       width: { type: Number, default: VIDEO_DIMENSIONS.width },
       quality: { type: Number, min: 1, max: 100 },
     },
