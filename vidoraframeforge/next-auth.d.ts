@@ -1,12 +1,24 @@
 // this helps to catch all the authentications calling 
-import NextAuth ,{DefaultSession, defaultSession} from "next-auth"
+import NextAuth, { DefaultSession, DefaultUser } from "next-auth"
+import { JWT } from "next-auth/jwt"
 
 declare module "next-auth" {
-  
   interface Session {
     user: {
-      /** The user's postal address. */
       id: string
-    }& DefaultSession["user"]
+      role: string
+    } & DefaultSession["user"]
+  }
+
+  interface User {
+    id: string
+    role: string
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string
+    role: string
   }
 }
