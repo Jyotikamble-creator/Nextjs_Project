@@ -10,6 +10,8 @@ export interface RegisterFormData {
   name: string;
   email: string;
   password: string;
+  confirmPassword: string;
+  agreeToTerms: boolean;
 }
 
 export interface FormErrors {
@@ -25,6 +27,8 @@ export interface RegisterFormErrors {
   name?: string;
   email?: string;
   password?: string;
+  confirmPassword?: string;
+  agreeToTerms?: string;
   general?: string;
 }
 

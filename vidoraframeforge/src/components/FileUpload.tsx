@@ -1,10 +1,12 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/AuthContext"
 import { useUpload } from "@/hooks/useUpload"
 
 export default function FileUpload() {
+  const router = useRouter()
   const { isAuthenticated } = useAuth()
   const { uploadVideo, uploading, progress } = useUpload()
   const [file, setFile] = useState<File | null>(null)
@@ -26,6 +28,11 @@ export default function FileUpload() {
     e.preventDefault()
     if (!file || !metadata.title) return
 
+    if (!isAuthenticated) {
+      router.push("/register")
+      return
+    }
+
     try {
       await uploadVideo(file, {
         ...metadata,
@@ -43,10 +50,6 @@ export default function FileUpload() {
     } catch (error) {
       console.error("Upload failed:", error)
     }
-  }
-
-  if (!isAuthenticated) {
-    return <div>Please login to upload videos</div>
   }
 
   return (
