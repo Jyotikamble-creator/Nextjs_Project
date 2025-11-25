@@ -25,7 +25,7 @@ export default function Header() {
               <User className="w-4 h-4 md:w-5 md:h-5 text-white" />
             </div>
           ) : (
-            <Link href="/register">
+            <Link href="/auth/signup">
               <button className="bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-2 px-3 md:px-4 rounded-lg shadow-lg transition-all duration-300 transform hover:scale-105 text-sm md:text-base">
                 <Upload className="w-4 h-4 inline mr-1 md:mr-2" />
                 Upload

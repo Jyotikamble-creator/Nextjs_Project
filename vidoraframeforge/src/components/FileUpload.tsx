@@ -29,7 +29,7 @@ export default function FileUpload() {
     if (!file || !metadata.title) return
 
     if (!isAuthenticated) {
-      router.push("/register")
+      router.push("/auth/signup")
       return
     }
 

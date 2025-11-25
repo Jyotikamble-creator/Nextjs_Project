@@ -15,7 +15,7 @@ export default function UploadPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-lg mb-4">Please login to upload videos</p>
-          <a href="/login" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          <a href="/auth/login" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
             Login
           </a>
         </div>

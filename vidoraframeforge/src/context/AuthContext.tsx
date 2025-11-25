@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session?.user,
     isLoggedIn: !!session,
     isAuthenticated: !!session,
-    logout: () => signOut({ callbackUrl: "/login" }),
+    logout: () => signOut({ callbackUrl: "/auth/login" }),
     loading: status === "loading",
   }
 

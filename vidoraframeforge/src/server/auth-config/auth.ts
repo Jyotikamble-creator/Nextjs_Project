@@ -48,8 +48,8 @@ export const authOptions: NextAuthOptions = {
     maxAge: 7 * 24 * 60 * 60, // 7 days
   },
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: "/auth/login",
+    error: "/auth/login",
   },
   callbacks: {
     async jwt({ token, user }) {

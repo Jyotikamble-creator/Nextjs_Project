@@ -7,8 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const { name, email, password } = await request.json()
 
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 })
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
     if (password.length < 6) {
@@ -24,8 +24,11 @@ export async function POST(request: NextRequest) {
     // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    // Use provided name or generate from email
+    const userName = name || email.split('@')[0]
+
     const newUser = await User.create({
-      name,
+      name: userName,
       email,
       password: hashedPassword, // Use hashed password
     })
