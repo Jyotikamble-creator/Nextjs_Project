@@ -1,8 +1,10 @@
 import mongoose from "mongoose"
+import { Logger, LogTags } from "@/lib/logger"
 
 const MONGODB_URI = process.env.MONGODB_URI!
 
 if (!MONGODB_URI) {
+  Logger.e(LogTags.DB_CONNECT, 'MONGODB_URI environment variable is not defined');
   throw new Error("Please define the MONGODB_URI environment variable")
 }
 
@@ -22,6 +24,7 @@ if (!cached) {
 
 export async function connectionToDatabase() {
   if (cached.conn) {
+    Logger.d(LogTags.DB_CONNECT, 'Using existing database connection');
     return cached.conn
   }
 
@@ -33,17 +36,19 @@ export async function connectionToDatabase() {
       socketTimeoutMS: 45000,
     }
 
+    Logger.d(LogTags.DB_CONNECT, 'Creating new database connection promise');
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      console.log("✅ MongoDB Connected")
+      Logger.i(LogTags.DB_CONNECT, 'MongoDB Connected successfully');
       return mongooseInstance.connection
     })
   }
 
   try {
     cached.conn = await cached.promise
+    Logger.d(LogTags.DB_CONNECT, 'Database connection established and cached');
   } catch (e) {
     cached.promise = null
-    console.error("❌ MongoDB Connection Error:", e)
+    Logger.e(LogTags.DB_CONNECT, `MongoDB Connection Error: ${String(e)}`);
     throw e
   }
 
@@ -56,10 +61,10 @@ export async function disconnectFromDatabase() {
       await mongoose.disconnect()
       cached.conn = null
       cached.promise = null
-      console.log("🔌 MongoDB Disconnected")
+      Logger.i(LogTags.DB_CONNECT, 'MongoDB Disconnected successfully');
     }
   } catch (error) {
-    console.error("Error disconnecting from MongoDB:", error)
+    Logger.e(LogTags.DB_CONNECT, `Error disconnecting from MongoDB: ${String(error)}`);
     throw error
   }
 }
