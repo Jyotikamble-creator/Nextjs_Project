@@ -1,4 +1,4 @@
-import Header from "@/components/landing/Header";
+import Header from "@/components/home/Header";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import { VideoInfo } from "@/components/video/VideoInfo";
 import { VideoDescription } from "@/components/video/VideoDescription";

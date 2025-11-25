@@ -9,40 +9,29 @@ const features = [
     icon: Upload,
     title: "Easy Upload",
     description: "Upload your videos with just a few clicks. Support for all major formats.",
-    iconGradient: "bg-gradient-to-r from-purple-500 to-purple-700"
+    iconGradient: "bg-linear-to-r from-purple-500 to-purple-700"
   },
   {
     icon: Share,
     title: "Share Everywhere",
     description: "Share your content across all platforms and reach your audience.",
-    iconGradient: "bg-gradient-to-r from-pink-500 to-pink-700"
+    iconGradient: "bg-linear-to-r from-pink-500 to-pink-700"
   },
   {
     icon: Users,
     title: "Build Community",
     description: "Connect with viewers, build your following, and grow your channel.",
-    iconGradient: "bg-gradient-to-r from-blue-500 to-blue-700"
+    iconGradient: "bg-linear-to-r from-blue-500 to-blue-700"
   }
-];
-
-const stats = [
-  { number: "10M+", label: "Active Users" },
-  { number: "50M+", label: "Videos Uploaded" },
-  { number: "1B+", label: "Hours Watched" },
-  { number: "180+", label: "Countries" }
 ];
 
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-20">
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="container mx-auto px-4 py-20 w-full">
         <div className="text-center mb-20">
-          <div className="inline-flex items-center gap-2 bg-purple-500/20 text-purple-300 px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <TrendingUp className="w-4 h-4" />
-            The Future of Video Sharing
-          </div>
+          
           <h1 className="text-6xl md:text-7xl font-bold text-white mb-6 leading-tight">
             Share Your <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Stories</span>
             <br />With The World
@@ -76,17 +65,7 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Stats Section */}
-        <div className="bg-linear-to-r from-purple-600/20 to-pink-600/20 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {stats.map((stat, index) => (
-              <div key={index}>
-                <div className={statNumberClasses}>{stat.number}</div>
-                <div className="text-gray-400">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+        
       </div>
     </div>
   );

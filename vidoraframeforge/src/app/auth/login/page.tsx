@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
 import { LoginForm } from "@/components/auth/LoginForm";
 import Image from "next/image";
 
@@ -13,7 +12,7 @@ export default function LoginPage() {
       {/* Left Side - Form Section */}
       <div className="w-full lg:w-1/2 flex flex-col p-8 lg:p-12">
         <div className="mb-12">
-          <Logo />
+          <h2 className="text-2xl font-bold text-white">VidoraFrameForge</h2>
         </div>
 
         <div className="flex-1 flex items-center justify-center">
