@@ -11,7 +11,7 @@ export default function SignupForm() {
     email: "",
     password: "",
   })
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -20,7 +20,11 @@ export default function SignupForm() {
     setFormData(prev => ({ ...prev, [name]: value }))
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: undefined }))
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[name]
+        return newErrors
+      })
     }
   }
 
@@ -169,7 +173,7 @@ export default function SignupForm() {
           href="/auth/login"
           className="text-sm text-purple-400 hover:text-purple-300 transition-colors font-medium"
         >
-          Sign In
+          Login
         </Link>
       </div>
     </div>

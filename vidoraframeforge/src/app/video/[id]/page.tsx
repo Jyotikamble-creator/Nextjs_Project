@@ -17,7 +17,7 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
   if (!video) return <p>Loading...</p>;
 
   return (
-    <div className="p-4">
+    <div className="min-h-screen p-4">
       <VideoPlayer src={video.videoUrl} />
       <h2 className="text-xl mt-4">
         Title: {video.title}</h2>

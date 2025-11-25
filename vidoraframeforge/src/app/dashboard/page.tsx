@@ -32,7 +32,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">My Videos</h1>
         <p className="text-gray-600">{videos.length} videos</p>
