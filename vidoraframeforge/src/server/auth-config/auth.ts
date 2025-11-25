@@ -2,8 +2,8 @@ import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { connectionToDatabase } from "@/server/db"
 import User from "@/server/models/User"
-import bcrypt from "bcryptjs"
-import { Logger, LogTags, categorizeError, DatabaseError, ValidationError } from "@/lib/logger"
+import * as bcrypt from "bcryptjs"
+import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError } from "@/lib/logger"
 import { isValidEmail } from "@/lib/validation"
 
 export const authOptions: NextAuthOptions = {
@@ -20,24 +20,29 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Missing credentials")
         }
 
-        Logger.auth.loginAttempt(credentials.email);
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+        logger.auth.loginAttempt(normalizedEmail);
 
         try {
           await connectionToDatabase()
 
-          const user = await User.findOne({ email: credentials.email })
+          const user = await User.findOne({ email: normalizedEmail })
           if (!user) {
-            Logger.w(LogTags.LOGIN, 'Login failed: user not found', { email: Logger.maskEmail(credentials.email) });
-            throw new Error("User not found")
+            Logger.w(LogTags.LOGIN, 'Login failed: user not found', { email: Logger.maskEmail(normalizedEmail) });
+            return null
           }
+
+          Logger.d(LogTags.LOGIN, 'User found, checking password', { userId: user._id.toString(), hasPassword: !!user.password });
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+          Logger.d(LogTags.LOGIN, 'Password validation result', { isValid: isPasswordValid });
+
           if (!isPasswordValid) {
-            Logger.w(LogTags.LOGIN, 'Login failed: invalid password', { email: Logger.maskEmail(credentials.email) });
-            throw new Error("Invalid password")
+            Logger.w(LogTags.LOGIN, 'Login failed: invalid password', { email: Logger.maskEmail(normalizedEmail) });
+            return null
           }
 
-          Logger.auth.loginSuccess(user._id.toString());
+          logger.auth.loginSuccess(user._id.toString());
 
           return {
             id: user._id.toString(),
@@ -46,6 +51,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
           }
         } catch (error) {
+          Logger.e(LogTags.LOGIN, 'Login error details', { error: error });
           const categorizedError = categorizeError(error);
 
           if (categorizedError instanceof DatabaseError) {
@@ -53,7 +59,7 @@ export const authOptions: NextAuthOptions = {
           } else if (categorizedError instanceof ValidationError) {
             Logger.e(LogTags.LOGIN, `Validation error during login: ${categorizedError.message}`);
           } else {
-            Logger.e(LogTags.LOGIN, `Unexpected error during login: ${categorizedError.message}`, categorizedError);
+            Logger.e(LogTags.LOGIN, `Unexpected error during login: ${categorizedError.message}`, { error: categorizedError });
           }
 
           throw error
