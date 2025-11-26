@@ -38,26 +38,41 @@ export default function VideoCard({ video }: VideoCardProps) {
   }
 
   return (
-    <div className="w-full max-w-sm cursor-pointer border rounded-lg shadow hover:shadow-lg transition">
-      <Link href={`/video/${video._id}`}>
-        <div className="relative w-full h-48">
+    <Link href={`/video/${video._id}`}>
+      <div className="group bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden hover:bg-white/10 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/10 cursor-pointer">
+        <div className="relative w-full aspect-video">
           <Image
             src={video.thumbnailUrl || "/placeholder.svg"}
             alt={video.title}
             fill
-            className="object-cover rounded-t-lg"
+            className="object-cover group-hover:scale-110 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
-        </div>
-        <div className="p-4">
-          <h3 className="font-semibold text-lg line-clamp-2">{video.title}</h3>
-          <p className="text-sm text-gray-500">By {getUploaderName()}</p>
-          <div className="flex justify-between items-center mt-2">
-            <p className="text-sm text-gray-400">{getViews()} views</p>
-            <p className="text-sm text-gray-400">{getCreatedAt()}</p>
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/20 backdrop-blur-sm rounded-full p-3">
+              <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+            </div>
           </div>
         </div>
-      </Link>
-    </div>
+        <div className="p-4">
+          <h3 className="font-semibold text-lg text-white line-clamp-2 mb-2 group-hover:text-purple-300 transition-colors">
+            {video.title}
+          </h3>
+          <p className="text-sm text-gray-400 mb-3">By {getUploaderName()}</p>
+          <div className="flex justify-between items-center text-xs text-gray-500">
+            <span className="flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              {getViews()} views
+            </span>
+            <span>{getCreatedAt()}</span>
+          </div>
+        </div>
+      </div>
+    </Link>
   )
 }

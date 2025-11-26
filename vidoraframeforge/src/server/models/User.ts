@@ -6,6 +6,13 @@ export interface IUser extends Document {
   password: string
   role: "admin" | "user"
   avatar?: string
+  stats: {
+    totalPhotos: number
+    totalVideos: number
+    totalJournals: number
+    lastActive: Date
+    streak: number
+  }
   createdAt: Date
   updatedAt: Date
 }
@@ -39,6 +46,28 @@ const userSchema = new Schema<IUser>(
     avatar: {
       type: String,
       default: "",
+    },
+    stats: {
+      totalPhotos: {
+        type: Number,
+        default: 0,
+      },
+      totalVideos: {
+        type: Number,
+        default: 0,
+      },
+      totalJournals: {
+        type: Number,
+        default: 0,
+      },
+      lastActive: {
+        type: Date,
+        default: Date.now,
+      },
+      streak: {
+        type: Number,
+        default: 0,
+      },
     },
   },
   {

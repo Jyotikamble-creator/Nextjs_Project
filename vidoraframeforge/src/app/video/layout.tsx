@@ -5,7 +5,7 @@ import "@/app/globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Streamify - Watch Videos",
+  title: "VidoraFrameForge - Watch Videos",
   description: "Watch and discover amazing videos",
 };
 

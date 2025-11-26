@@ -5,8 +5,8 @@ import "@/app/globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Dashboard - Streamify",
-  description: "Manage your video content on Streamify",
+  title: "Dashboard - VidoraFrameForge",
+  description: "Manage your video content on VidoraFrameForge",
 };
 
 export default function RootLayout({
