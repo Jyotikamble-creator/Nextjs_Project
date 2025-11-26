@@ -17,8 +17,12 @@ export interface IVideo {
   likes?: number
   tags?: string[]
   category?: string
+  album?: string
+  location?: string
+  takenAt?: Date
   isPublic?: boolean
   fileId?: string
+  fileName?: string
   duration?: number
   size?: number
   controls?: boolean
@@ -42,8 +46,20 @@ const videoSchema = new Schema<IVideo>(
     likes: { type: Number, default: 0 },
     tags: [{ type: String }],
     category: { type: String },
+    album: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Album name cannot exceed 100 characters"],
+    },
+    location: {
+      type: String,
+      trim: true,
+      maxlength: [100, "Location cannot exceed 100 characters"],
+    },
+    takenAt: Date,
     isPublic: { type: Boolean, default: true },
     fileId: { type: String },
+    fileName: { type: String },
     duration: { type: Number, default: 0 },
     size: { type: Number, default: 0 },
     controls: { type: Boolean, default: true },

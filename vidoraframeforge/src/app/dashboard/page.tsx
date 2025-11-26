@@ -6,20 +6,149 @@ import VideoCard from "@/components/video/VideoCard"
 import { fetchUserVideos } from "@/server/services/videoService"
 import Loader from "@/components/common/Loader"
 import { IVideo } from "@/server/models/Video"
+import { IPhoto } from "@/server/models/Photo"
+import { IJournal } from "@/server/models/Journal"
+
+interface UserStats {
+  totalPhotos: number
+  totalVideos: number
+  totalJournals: number
+  lastActive: Date
+  streak: number
+}
+
+interface ActivityItem {
+  id: string
+  type: 'photo' | 'video' | 'journal'
+  title: string
+  createdAt: Date
+  thumbnail?: string
+}
 
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth()
   const [videos, setVideos] = useState<IVideo[]>([])
+  const [photos, setPhotos] = useState<IPhoto[]>([])
+  const [journals, setJournals] = useState<IJournal[]>([])
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [activity, setActivity] = useState<ActivityItem[]>([])
   const [videosLoading, setVideosLoading] = useState(true)
+  const [statsLoading, setStatsLoading] = useState(true)
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
+      // Fetch videos
       fetchUserVideos(user.id)
         .then(setVideos)
         .catch(console.error)
         .finally(() => setVideosLoading(false))
+
+      // Fetch user stats
+      fetchUserStats()
+
+      // Fetch recent activity
+      fetchRecentActivity()
     }
   }, [isAuthenticated, user])
+
+  const fetchUserStats = async () => {
+    try {
+      const response = await fetch(`/api/auth/user-stats?userId=${user?.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setStats(data.stats)
+      }
+    } catch (error) {
+      console.error('Failed to fetch user stats:', error)
+    } finally {
+      setStatsLoading(false)
+    }
+  }
+
+  const fetchRecentActivity = async () => {
+    try {
+      // Fetch recent photos
+      const photosResponse = await fetch(`/api/photos?userId=${user?.id}&limit=5`)
+      const photosData = photosResponse.ok ? await photosResponse.json() : []
+
+      // Fetch recent journals
+      const journalsResponse = await fetch(`/api/journals?userId=${user?.id}&limit=5`)
+      const journalsData = journalsResponse.ok ? await journalsResponse.json() : []
+
+      // Fetch recent videos
+      const videosResponse = await fetch(`/api/videos?userId=${user?.id}&limit=5`)
+      const videosData = videosResponse.ok ? await videosResponse.json() : []
+
+      // Combine and sort by date
+      const allActivity: ActivityItem[] = [
+        ...photosData.map((photo: IPhoto) => ({
+          id: photo._id.toString(),
+          type: 'photo' as const,
+          title: photo.title,
+          createdAt: new Date(photo.createdAt),
+          thumbnail: photo.thumbnailUrl
+        })),
+        ...journalsData.map((journal: IJournal) => ({
+          id: journal._id.toString(),
+          type: 'journal' as const,
+          title: journal.title,
+          createdAt: new Date(journal.createdAt)
+        })),
+        ...videosData.map((video: IVideo) => ({
+          id: video._id?.toString() || '',
+          type: 'video' as const,
+          title: video.title,
+          createdAt: new Date(video.createdAt),
+          thumbnail: video.thumbnailUrl
+        }))
+      ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 10)
+
+      setActivity(allActivity)
+    } catch (error) {
+      console.error('Failed to fetch recent activity:', error)
+    }
+  }
+
+  const ProgressChart = ({ value, max, label, color }: { value: number; max: number; label: string; color: string }) => {
+    const percentage = Math.min((value / max) * 100, 100)
+    const circumference = 2 * Math.PI * 40
+    const strokeDasharray = circumference
+    const strokeDashoffset = circumference - (percentage / 100) * circumference
+
+    return (
+      <div className="flex flex-col items-center">
+        <div className="relative w-20 h-20">
+          <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+            <circle
+              cx="50"
+              cy="50"
+              r="40"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              className="text-gray-700"
+            />
+            <circle
+              cx="50"
+              cy="50"
+              r="40"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              strokeDasharray={strokeDasharray}
+              strokeDashoffset={strokeDashoffset}
+              className={`${color} transition-all duration-1000 ease-out`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-lg font-bold text-white">{value}</span>
+          </div>
+        </div>
+        <p className="text-sm text-gray-400 mt-2 text-center">{label}</p>
+      </div>
+    )
+  }
 
   if (loading) return <Loader fullscreen message="Loading dashboard..." />
 
@@ -38,54 +167,147 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-4xl font-bold text-white mb-2">My Videos</h1>
-              <p className="text-gray-300">Manage and track your video content</p>
+              <h1 className="text-4xl font-bold text-white mb-2">My Memory Journal</h1>
+              <p className="text-gray-300">Track your memories, photos, and stories</p>
             </div>
-            <div className="text-right">
-              <p className="text-2xl font-bold text-white">{videos.length}</p>
-              <p className="text-gray-400 text-sm">Total Videos</p>
+            <div className="flex gap-4">
+              <a
+                href="/upload"
+                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Upload Video
+              </a>
+              <a
+                href="/upload-photo"
+                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Upload Photo
+              </a>
+              <a
+                href="/create-journal"
+                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Write Journal
+              </a>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Stats Overview */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {videosLoading ? (
-          <div className="flex justify-center items-center min-h-[400px]">
-            <Loader message="Loading your videos..." />
-          </div>
-        ) : videos.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {videos.map((video) => (
-              <VideoCard
-                key={video._id?.toString() || Math.random().toString()}
-                video={video}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-            <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-12 border border-white/10 max-w-md">
-              <div className="w-20 h-20 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          {statsLoading ? (
+            <div className="col-span-4 flex justify-center">
+              <Loader message="Loading statistics..." />
+            </div>
+          ) : stats ? (
+            <>
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+                <ProgressChart value={stats.totalPhotos} max={100} label="Photos" color="text-blue-400" />
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">No videos yet</h3>
-              <p className="text-gray-400 mb-8">Start sharing your stories with the world. Upload your first video to get started.</p>
-              <a
-                href="/upload"
-                className="inline-flex items-center px-6 py-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Upload Your First Video
-              </a>
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+                <ProgressChart value={stats.totalVideos} max={50} label="Videos" color="text-purple-400" />
+              </div>
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+                <ProgressChart value={stats.totalJournals} max={200} label="Journals" color="text-green-400" />
+              </div>
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+                <ProgressChart value={stats.streak} max={30} label="Day Streak" color="text-yellow-400" />
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {/* Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Activity Feed */}
+          <div className="lg:col-span-1">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
+              <div className="space-y-4">
+                {activity.length > 0 ? (
+                  activity.map((item) => (
+                    <div key={item.id} className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        item.type === 'photo' ? 'bg-blue-600' :
+                        item.type === 'video' ? 'bg-purple-600' : 'bg-green-600'
+                      }`}>
+                        {item.type === 'photo' ? (
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        ) : item.type === 'video' ? (
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{item.title}</p>
+                        <p className="text-xs text-gray-400">
+                          {item.createdAt.toLocaleDateString()} • {item.type}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-center py-8">No recent activity</p>
+                )}
+              </div>
             </div>
           </div>
-        )}
+
+          {/* Videos Grid */}
+          <div className="lg:col-span-2">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <h3 className="text-xl font-bold text-white mb-4">My Videos</h3>
+              {videosLoading ? (
+                <div className="flex justify-center items-center min-h-[200px]">
+                  <Loader message="Loading your videos..." />
+                </div>
+              ) : videos.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {videos.slice(0, 4).map((video) => (
+                    <VideoCard
+                      key={video._id?.toString() || Math.random().toString()}
+                      video={video}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[200px] text-center">
+                  <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-lg font-semibold text-white mb-2">No videos yet</h4>
+                  <p className="text-gray-400 mb-4">Start sharing your stories with the world.</p>
+                  <a
+                    href="/upload"
+                    className="inline-flex items-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                  >
+                    Upload Your First Video
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
