@@ -76,7 +76,7 @@ export default function Dashboard() {
       const journalsData = journalsResponse.ok ? await journalsResponse.json() : []
 
       // Fetch recent videos
-      const videosResponse = await fetch(`/api/videos?userId=${user?.id}&limit=5`)
+      const videosResponse = await fetch(`/api/auth/videos?userId=${user?.id}`)
       const videosData = videosResponse.ok ? await videosResponse.json() : []
 
       // Combine and sort by date
