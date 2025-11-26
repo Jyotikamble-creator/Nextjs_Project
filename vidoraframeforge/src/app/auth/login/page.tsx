@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,9 @@ export default function LoginPage() {
         </div>
 
         {/* Auth Form */}
-        <LoginForm />
+        <Suspense fallback={<div>Loading...</div>}>
+          <LoginForm />
+        </Suspense>
 
         {/* Footer */}
         <div className="text-center mt-8">

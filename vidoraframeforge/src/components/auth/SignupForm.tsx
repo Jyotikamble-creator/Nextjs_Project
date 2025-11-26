@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import Link from "next/link"
 
 export default function SignupForm() {
@@ -15,9 +16,25 @@ export default function SignupForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const [passwordStrength, setPasswordStrength] = useState(0)
+
+  const calculatePasswordStrength = (password: string): number => {
+    let strength = 0
+    if (password.length >= 6) strength += 25
+    if (password.length >= 8) strength += 25
+    if (/[A-Z]/.test(password)) strength += 25
+    if (/[0-9]/.test(password)) strength += 25
+    return strength
+  }
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+
+    if (name === 'password') {
+      setPasswordStrength(calculatePasswordStrength(value))
+    }
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => {
@@ -41,6 +58,8 @@ export default function SignupForm() {
       newErrors.password = "Password is required"
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters"
+    } else if (passwordStrength < 50) {
+      newErrors.password = "Password is too weak. Please use a stronger password"
     }
 
     setErrors(newErrors)
@@ -55,6 +74,7 @@ export default function SignupForm() {
     setLoading(true)
 
     try {
+      // Register the user
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -69,11 +89,13 @@ export default function SignupForm() {
       const data = await response.json()
 
       if (response.ok) {
-        router.push("/auth/login?message=Registration successful")
+        // Redirect to login page with success message
+        router.push("/auth/login?message=Registration successful! Please login with your credentials.")
       } else {
         setErrors({ general: data.error || "Registration failed" })
       }
     } catch (error) {
+      console.error("Registration error:", error)
       setErrors({ general: "Network error. Please try again." })
     } finally {
       setLoading(false)
@@ -112,6 +134,9 @@ export default function SignupForm() {
               required
             />
           </div>
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-400">{errors.email}</p>
+          )}
         </div>
 
         {/* Password Field */}
@@ -145,6 +170,31 @@ export default function SignupForm() {
               )}
             </button>
           </div>
+          {formData.password && (
+            <div className="mt-2">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 bg-gray-700 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      passwordStrength < 50 ? 'bg-red-500' :
+                      passwordStrength < 75 ? 'bg-yellow-500' : 'bg-green-500'
+                    }`}
+                    style={{ width: `${passwordStrength}%` }}
+                  ></div>
+                </div>
+                <span className={`text-xs ${
+                  passwordStrength < 50 ? 'text-red-400' :
+                  passwordStrength < 75 ? 'text-yellow-400' : 'text-green-400'
+                }`}>
+                  {passwordStrength < 50 ? 'Weak' :
+                   passwordStrength < 75 ? 'Medium' : 'Strong'}
+                </span>
+              </div>
+            </div>
+          )}
+          {errors.password && (
+            <p className="mt-1 text-sm text-red-400">{errors.password}</p>
+          )}
         </div>
 
         {/* Error Display */}

@@ -1,10 +1,10 @@
 "use client"
 
-import { useSession, signOut } from "next-auth/react"
+import { useSession, signOut, type Session } from "next-auth/react"
 import { createContext, useContext, type ReactNode } from "react"
 
 interface AuthContextType {
-  user: any | null // NextAuth user type
+  user: Session["user"] | null
   isLoggedIn: boolean
   isAuthenticated: boolean
   logout: () => void

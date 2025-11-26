@@ -48,19 +48,45 @@ export async function POST(request: NextRequest) {
 
     Logger.d(LogTags.REGISTER, 'Input validation passed', { email: Logger.maskEmail(sanitizedEmail) });
 
+    // Hash the password before database operations
+    const hashedPassword = await bcrypt.hash(password, 12)
+    Logger.d(LogTags.REGISTER, 'Password hashed successfully');
+
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for registration');
 
     const existingUser = await User.findOne({ email: sanitizedEmail })
     if (existingUser) {
-      Logger.w(LogTags.REGISTER, 'Registration failed: user already exists', { email: Logger.maskEmail(sanitizedEmail) });
-      return NextResponse.json({ error: "User already registered" }, { status: 409 })
+      // Check if existing user has a password
+      if (existingUser.password) {
+        Logger.w(LogTags.REGISTER, 'Registration failed: user already exists', { email: Logger.maskEmail(sanitizedEmail) });
+        return NextResponse.json({ error: "User already registered" }, { status: 409 })
+      } else {
+        // User exists but has no password - update the existing record
+        Logger.i(LogTags.REGISTER, 'Updating incomplete user record', { userId: existingUser._id.toString() });
+        
+        try {
+          existingUser.password = hashedPassword;
+          existingUser.name = sanitizedName;
+          await existingUser.save();
+          
+          Logger.i(LogTags.REGISTER, 'Incomplete user record updated successfully', { userId: existingUser._id.toString(), email: Logger.maskEmail(sanitizedEmail) });
+          
+          return NextResponse.json(
+            {
+              message: "User successfully registered",
+              user: { id: existingUser._id, email: existingUser.email },
+            },
+            { status: 201 },
+          )
+        } catch (saveError) {
+          Logger.e(LogTags.REGISTER, 'Failed to update incomplete user record', { error: saveError, userId: existingUser._id.toString() });
+          throw saveError; // Re-throw to be caught by outer catch
+        }
+      }
     }
 
-    // Hash the password before saving
-    const hashedPassword = await bcrypt.hash(password, 12)
-    Logger.d(LogTags.REGISTER, 'Password hashed successfully');
-
+    // Create new user (only if no existing user found)
     const newUser = await User.create({
       name: sanitizedName,
       email: sanitizedEmail,
@@ -78,7 +104,9 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     )
   } catch (error) {
+    Logger.e(LogTags.REGISTER, 'Registration error details', { error: error });
     const categorizedError = categorizeError(error);
+    Logger.d(LogTags.REGISTER, 'Categorized error type', { type: categorizedError.constructor.name, message: categorizedError.message });
 
     if (categorizedError instanceof ValidationError) {
       Logger.e(LogTags.REGISTER, `Validation error in registration: ${categorizedError.message}`);

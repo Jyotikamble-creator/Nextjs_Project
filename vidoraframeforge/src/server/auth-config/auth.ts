@@ -3,7 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { connectionToDatabase } from "@/server/db"
 import User from "@/server/models/User"
 import * as bcrypt from "bcryptjs"
-import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError } from "@/lib/logger"
+import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError, AuthenticationError } from "@/lib/logger"
 import { isValidEmail } from "@/lib/validation"
 
 export const authOptions: NextAuthOptions = {
@@ -34,6 +34,12 @@ export const authOptions: NextAuthOptions = {
 
           Logger.d(LogTags.LOGIN, 'User found, checking password', { userId: user._id.toString(), hasPassword: !!user.password });
 
+          // Check if user has a password (defensive programming)
+          if (!user.password) {
+            Logger.w(LogTags.LOGIN, 'Login failed: user has no password set', { email: Logger.maskEmail(normalizedEmail) });
+            throw new Error("ACCOUNT_INCOMPLETE")
+          }
+
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
           Logger.d(LogTags.LOGIN, 'Password validation result', { isValid: isPasswordValid });
 
@@ -53,11 +59,16 @@ export const authOptions: NextAuthOptions = {
         } catch (error) {
           Logger.e(LogTags.LOGIN, 'Login error details', { error: error });
           const categorizedError = categorizeError(error);
+          Logger.d(LogTags.LOGIN, 'Categorized error type', { type: categorizedError.constructor.name, message: categorizedError.message });
 
           if (categorizedError instanceof DatabaseError) {
             Logger.e(LogTags.DB_ERROR, `Database error during login: ${categorizedError.message}`);
           } else if (categorizedError instanceof ValidationError) {
             Logger.e(LogTags.LOGIN, `Validation error during login: ${categorizedError.message}`);
+          } else if (categorizedError instanceof AuthenticationError) {
+            Logger.w(LogTags.LOGIN, `Authentication error during login: ${categorizedError.message}`);
+            // Re-throw authentication errors so NextAuth passes them to the client
+            throw categorizedError;
           } else {
             Logger.e(LogTags.LOGIN, `Unexpected error during login: ${categorizedError.message}`, { error: categorizedError });
           }

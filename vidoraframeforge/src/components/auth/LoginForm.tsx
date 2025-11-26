@@ -1,21 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export const LoginForm = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string | React.ReactNode>>({});
+  const [successMessage, setSuccessMessage] = useState<string>("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check for success message from URL
+  useEffect(() => {
+    const message = searchParams.get('message');
+    if (message) {
+      setSuccessMessage(message);
+    }
+  }, [searchParams]);
 
   const validateForm = (): boolean => {
     const newErrors: any = {};
@@ -47,9 +57,30 @@ export const LoginForm = () => {
       });
 
       if (result?.error) {
-        setErrors({
-          general: "Invalid credentials. Please try again.",
-        });
+        if (result.error === "CredentialsSignin") {
+          setErrors({
+            general: "Invalid email or password. Please check your credentials and try again.",
+          });
+        } else if (result.error?.includes("ACCOUNT_INCOMPLETE") ||
+                   result.error?.includes("Authentication error")) {
+          setErrors({
+            general: (
+              <div>
+                <p className="mb-2">Account setup incomplete. Please register again to complete your account setup.</p>
+                <Link
+                  href="/auth/signup"
+                  className="text-purple-400 hover:text-purple-300 underline text-sm"
+                >
+                  Go to Sign Up →
+                </Link>
+              </div>
+            ),
+          });
+        } else {
+          setErrors({
+            general: "Authentication failed. Please try again later.",
+          });
+        }
       } else {
         router.push("/dashboard");
       }
@@ -80,6 +111,13 @@ export const LoginForm = () => {
           Welcome back! Please enter your details.
         </p>
       </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-6 p-3 bg-green-900/50 border border-green-700 rounded-lg">
+          <p className="text-sm text-green-300">{successMessage}</p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email Field */}
@@ -138,7 +176,7 @@ export const LoginForm = () => {
         {/* Show login errors */}
         {errors.general && (
           <div className="p-3 bg-red-900/50 border border-red-700 rounded-lg">
-            <p className="text-sm text-red-300">{errors.general}</p>
+            <div className="text-sm text-red-300">{errors.general}</div>
           </div>
         )}
 

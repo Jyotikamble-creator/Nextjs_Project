@@ -112,6 +112,13 @@ export class ValidationError extends Error {
   }
 }
 
+export class AuthenticationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthenticationError';
+  }
+}
+
 /**
  * Categorize errors similar to exception handling patterns
  */
@@ -140,14 +147,31 @@ export function categorizeError(error: unknown): Error {
       return new SerializationError(`Error in parsing response: ${error.message}`, error);
     }
 
+    // Mongoose/MongoDB errors
+    if (error.name === 'ValidationError' || error.message.includes('validation failed')) {
+      return new ValidationError(`Validation error: ${error.message}`);
+    }
+
+    if (error.name === 'CastError' || error.name === 'MongoError' || error.name === 'MongoServerError') {
+      return new DatabaseError(`Database error: ${error.message}`);
+    }
+
     // Database errors
-    if (error.message.includes('MongoDB') || error.message.includes('database')) {
+    if (error.message.includes('MongoDB') || error.message.includes('database') || error.message.includes('E11000')) {
       return new DatabaseError(`Database error: ${error.message}`);
     }
 
     // Validation errors
     if (error.message.includes('validation') || error.message.includes('Validation')) {
       return new ValidationError(`Validation error: ${error.message}`);
+    }
+
+    // Authentication errors
+    if (error.message.includes('Account not fully set up') ||
+        error.message.includes('not fully set up') ||
+        error.message.includes('ACCOUNT_INCOMPLETE') ||
+        error.message.includes('Authentication')) {
+      return new AuthenticationError(`Authentication error: ${error.message}`);
     }
   }
 
