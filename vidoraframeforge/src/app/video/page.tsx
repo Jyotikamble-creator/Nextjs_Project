@@ -1,112 +1,175 @@
-import Header from "@/components/home/Header";
-import VideoPlayer from "@/components/video/VideoPlayer";
-import { VideoInfo } from "@/components/video/VideoInfo";
-import { VideoDescription } from "@/components/video/VideoDescription";
-import { CommentSection } from "@/components/video/CommentSection";
-import { UpNextSidebar } from "@/components/video/UpNextSidebar";
-import { Video, Comment, RelatedVideo } from "@/types/video/video";
+"use client"
 
-export const dynamic = 'force-dynamic';
+import { useEffect, useState } from "react"
+import { useAuth } from "@/context/AuthContext"
+import Loader from "@/components/common/Loader"
+import VideoCard from "@/components/video/VideoCard"
+import { IVideo } from "@/server/models/Video"
 
-// Sample data
-const video: Video = {
-  _id: "1",
-  title: "Exploring the Alps: A Cinematic Journey",
-  description: "Join us on an epic journey through the breathtaking landscapes of the Swiss Alps. From serene lakes to majestic peaks, this cinematic short film captures the raw beauty of nature.\n\nFilmed with the latest 8K drone technology. #Alps #Travel #Cinematic",
-  thumbnailUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=675&fit=crop",
-  videoUrl: "https://example.com/video.mp4",
-  uploader: {
-    _id: "1",
-    name: "Adventure Vistas",
-    email: "adventure@example.com",
-  },
-  views: 1200000,
-  likes: 150000,
-  createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 2 weeks ago
-  updatedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-  tags: ["Alps", "Travel", "Cinematic"],
-  category: "Travel",
-};
+export default function VideosPage() {
+  const { user, isAuthenticated, loading } = useAuth()
+  const [videos, setVideos] = useState<IVideo[]>([])
+  const [videosLoading, setVideosLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
 
-const comments: Comment[] = [
-  {
-    _id: "1",
-    author: {
-      name: "Alex Morgan",
-      avatar: "",
-    },
-    content: "Absolutely stunning cinematography! Makes me want to book a flight right now. Well done!",
-    likes: 1200,
-    postedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-  },
-  {
-    _id: "2",
-    author: {
-      name: "Casey Lee",
-      avatar: "",
-    },
-    content: "What drone did you use for these shots? The quality is insane.",
-    likes: 312,
-    postedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-  },
-];
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchVideos()
+    }
+  }, [isAuthenticated, searchTerm, selectedCategory])
 
-const relatedVideos: RelatedVideo[] = [
-  {
-    _id: "2",
-    title: "Whispers of the Redwood Forest",
-    thumbnailUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=225&fit=crop",
-    creator: "Nature Escapes",
-    views: 820000,
-    uploadedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-  },
-  {
-    _id: "3",
-    title: "Sahara Dreams: A Desert Time-lapse",
-    thumbnailUrl: "https://images.unsplash.com/photo-1509316785289-025f5b846b35?w=400&h=225&fit=crop",
-    creator: "Wanderlust Films",
-    views: 350000,
-    uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-  },
-  {
-    _id: "4",
-    title: "Chasing the Northern Lights in Norway",
-    thumbnailUrl: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?w=400&h=225&fit=crop",
-    creator: "Auroral Wonders",
-    views: 1500000,
-    uploadedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-  },
-  {
-    _id: "5",
-    title: "Life Under the Waves: Coral Reefs",
-    thumbnailUrl: "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=225&fit=crop",
-    creator: "Ocean Explorers",
-    views: 670000,
-    uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-  },
-];
+  const fetchVideos = async () => {
+    try {
+      setVideosLoading(true)
+      const params = new URLSearchParams()
+      if (searchTerm) params.append("search", searchTerm)
+      if (selectedCategory !== "all") params.append("category", selectedCategory)
+      if (user?.id) params.append("userId", user.id)
 
-export default function VideoDetailPage({ params }: { params: { id: string } }) {
+      const response = await fetch(`/api/auth/videos?${params.toString()}`)
+      if (response.ok) {
+        const data = await response.json()
+        setVideos(data)
+      } else {
+        console.error("Failed to fetch videos")
+        setVideos([])
+      }
+    } catch (error) {
+      console.error("Error fetching videos:", error)
+      setVideos([])
+    } finally {
+      setVideosLoading(false)
+    }
+  }
+
+  const handleDeleteVideo = async (videoId: string) => {
+    if (!confirm("Are you sure you want to delete this video?")) return
+
+    try {
+      const response = await fetch(`/api/auth/videos/${videoId}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        setVideos(videos.filter(video => video._id !== videoId))
+      } else {
+        console.error("Failed to delete video")
+      }
+    } catch (error) {
+      console.error("Error deleting video:", error)
+    }
+  }
+
+  if (loading) return <Loader fullscreen />
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-lg mb-4">Please login to view your videos</p>
+          <a href="/auth/login" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+            Login
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-[#0f1419]">
-      <Header />
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 py-8">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <div className="bg-black/20 backdrop-blur-sm border-b border-white/10 mb-8">
+          <div className="max-w-4xl mx-auto py-8">
+            <div className="flex items-center mb-6">
+              <svg className="w-8 h-8 text-purple-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <h1 className="text-3xl font-bold text-white">My Videos</h1>
+            </div>
 
-      <main className="container mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-4">
-            <VideoPlayer poster={video.thumbnailUrl} title={video.title} />
-            <VideoInfo video={video} />
-            <VideoDescription video={video} />
-            <CommentSection comments={comments} commentCount={2458} />
-          </div>
-
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <UpNextSidebar videos={relatedVideos} />
+            {/* Search and Filter */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <input
+                type="text"
+                placeholder="Search videos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all" className="bg-slate-800">All Categories</option>
+                <option value="Travel" className="bg-slate-800">Travel</option>
+                <option value="Nature" className="bg-slate-800">Nature</option>
+                <option value="Lifestyle" className="bg-slate-800">Lifestyle</option>
+                <option value="Technology" className="bg-slate-800">Technology</option>
+                <option value="Education" className="bg-slate-800">Education</option>
+                <option value="Entertainment" className="bg-slate-800">Entertainment</option>
+              </select>
+            </div>
           </div>
         </div>
-      </main>
+
+        {/* Videos Grid */}
+        <div className="space-y-8">
+          {videosLoading ? (
+            <div className="flex justify-center items-center min-h-[400px]">
+              <Loader message="Loading your videos..." />
+            </div>
+          ) : videos.length > 0 ? (
+            <>
+              <div className="text-center">
+                <p className="text-gray-400">
+                  {videos.length} video{videos.length !== 1 ? 's' : ''} found
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {videos.map((video) => (
+                  <VideoCard
+                    key={video._id}
+                    video={video}
+                    onDelete={handleDeleteVideo}
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-12 border border-white/10 max-w-md">
+                <div className="w-20 h-20 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">No videos found</h3>
+                <p className="text-gray-400 mb-8">
+                  {searchTerm || selectedCategory !== "all"
+                    ? "Try adjusting your search or filters."
+                    : "Start creating memories by uploading your first video."
+                  }
+                </p>
+                {!searchTerm && selectedCategory === "all" && (
+                  <a
+                    href="/upload"
+                    className="inline-flex items-center px-6 py-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Upload Video
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
-  );
+  )
 }

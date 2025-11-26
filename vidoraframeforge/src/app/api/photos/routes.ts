@@ -170,3 +170,173 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create photo" }, { status: 500 })
   }
 }
+
+export async function PUT(request: NextRequest) {
+  Logger.d(LogTags.VIDEO_UPLOAD, 'Photo update request received');
+
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: unauthorized access attempt');
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+
+    await connectionToDatabase()
+    Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo update');
+
+    const { searchParams } = new URL(request.url)
+    const photoId = searchParams.get("id")
+
+    if (!photoId) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: missing photo ID');
+      return NextResponse.json({ error: "Photo ID is required" }, { status: 400 })
+    }
+
+    const body = await request.json()
+    const { title, description, tags, album, location, isPublic } = body
+
+    Logger.d(LogTags.VIDEO_UPLOAD, 'Update request body parsed', {
+      photoId,
+      hasTitle: !!title,
+      hasDescription: !!description,
+      tagsCount: tags?.length || 0
+    });
+
+    // Find the photo and check ownership
+    const existingPhoto = await Photo.findById(photoId)
+    if (!existingPhoto) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: photo not found', { photoId });
+      return NextResponse.json({ error: "Photo not found" }, { status: 404 })
+    }
+
+    if (existingPhoto.uploader.toString() !== session.user.id) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: unauthorized access', {
+        photoId,
+        userId: session.user.id,
+        uploaderId: existingPhoto.uploader.toString()
+      });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    // Validate title if provided
+    if (title && !isValidVideoTitle(title)) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: invalid title', { title });
+      return NextResponse.json({ error: "Title must be between 1 and 100 characters" }, { status: 400 })
+    }
+
+    // Sanitize inputs
+    const updateData: Record<string, unknown> = {}
+    if (title !== undefined) updateData.title = sanitizeString(title);
+    if (description !== undefined) updateData.description = sanitizeString(description);
+    if (tags !== undefined) updateData.tags = tags;
+    if (album !== undefined) updateData.album = album ? sanitizeString(album) : undefined;
+    if (location !== undefined) updateData.location = location ? sanitizeString(location) : undefined;
+    if (isPublic !== undefined) updateData.isPublic = isPublic;
+
+    updateData.updatedAt = new Date();
+
+    Logger.d(LogTags.VIDEO_UPLOAD, 'Update data prepared', { photoId });
+
+    const updatedPhoto = await Photo.findByIdAndUpdate(
+      photoId,
+      updateData,
+      { new: true }
+    ).populate("uploader", "name avatar")
+
+    Logger.i(LogTags.VIDEO_UPLOAD, 'Photo updated successfully', {
+      photoId,
+      userId: session.user.id,
+      title: updatedPhoto?.title
+    });
+
+    return NextResponse.json(updatedPhoto)
+  } catch (error) {
+    const categorizedError = categorizeError(error);
+
+    if (categorizedError instanceof ValidationError) {
+      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in photo update: ${categorizedError.message}`);
+      return NextResponse.json({ error: categorizedError.message }, { status: 400 });
+    }
+
+    if (categorizedError instanceof DatabaseError) {
+      Logger.e(LogTags.DB_ERROR, `Database error in photo update: ${categorizedError.message}`);
+      return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
+    }
+
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo update: ${categorizedError.message}`, categorizedError);
+    return NextResponse.json({ error: "Failed to update photo" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  Logger.d(LogTags.VIDEO_UPLOAD, 'Photo deletion request received');
+
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: unauthorized access attempt');
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+
+    await connectionToDatabase()
+    Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo deletion');
+
+    const { searchParams } = new URL(request.url)
+    const photoId = searchParams.get("id")
+
+    if (!photoId) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: missing photo ID');
+      return NextResponse.json({ error: "Photo ID is required" }, { status: 400 })
+    }
+
+    Logger.d(LogTags.VIDEO_UPLOAD, 'Deletion request parsed', { photoId });
+
+    // Find the photo and check ownership
+    const existingPhoto = await Photo.findById(photoId)
+    if (!existingPhoto) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: photo not found', { photoId });
+      return NextResponse.json({ error: "Photo not found" }, { status: 404 })
+    }
+
+    if (existingPhoto.uploader.toString() !== session.user.id) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: unauthorized access', {
+        photoId,
+        userId: session.user.id,
+        uploaderId: existingPhoto.uploader.toString()
+      });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+    }
+
+    await Photo.findByIdAndDelete(photoId)
+
+    // Update user stats
+    await User.findByIdAndUpdate(session.user.id, {
+      $inc: { 'stats.totalPhotos': -1 },
+      $set: { 'stats.lastActive': new Date() }
+    });
+
+    Logger.i(LogTags.VIDEO_UPLOAD, 'Photo deleted successfully', {
+      photoId,
+      userId: session.user.id,
+      title: existingPhoto.title
+    });
+
+    return NextResponse.json({ message: "Photo deleted successfully" })
+  } catch (error) {
+    const categorizedError = categorizeError(error);
+
+    if (categorizedError instanceof DatabaseError) {
+      Logger.e(LogTags.DB_ERROR, `Database error in photo deletion: ${categorizedError.message}`);
+      return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
+    }
+
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo deletion: ${categorizedError.message}`, categorizedError);
+    return NextResponse.json({ error: "Failed to delete photo" }, { status: 500 })
+  }
+}

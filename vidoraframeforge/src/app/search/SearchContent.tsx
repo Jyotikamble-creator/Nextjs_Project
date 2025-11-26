@@ -1,0 +1,324 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { useAuth } from "@/context/AuthContext"
+import { useSearchParams } from "next/navigation"
+import Loader from "@/components/common/Loader"
+import PhotoCard from "@/components/photo/PhotoCard"
+import VideoCard from "@/components/video/VideoCard"
+import JournalCard from "@/components/journal/JournalCard"
+import { IPhoto } from "@/server/models/Photo"
+import { IVideo } from "@/server/models/Video"
+import { IJournal } from "@/server/models/Journal"
+
+interface SearchResult {
+  id: string
+  type: 'photo' | 'video' | 'journal'
+  item: IPhoto | IVideo | IJournal
+  relevance: number
+}
+
+export default function SearchContent() {
+  const { user, isAuthenticated, loading } = useAuth()
+  const searchParams = useSearchParams()
+  const [results, setResults] = useState<SearchResult[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [query, setQuery] = useState(searchParams.get('q') || '')
+  const [contentType, setContentType] = useState<'all' | 'photos' | 'videos' | 'journals'>('all')
+  const [sortBy, setSortBy] = useState<'relevance' | 'date'>('relevance')
+
+  useEffect(() => {
+    if (query.trim()) {
+      performSearch()
+    }
+  }, [query, contentType, sortBy])
+
+  const performSearch = async () => {
+    if (!query.trim()) return
+
+    setSearchLoading(true)
+
+    try {
+      const searchPromises = []
+
+      // Search photos
+      if (contentType === 'all' || contentType === 'photos') {
+        searchPromises.push(
+          fetch(`/api/photos?search=${encodeURIComponent(query)}${user?.id ? `&userId=${user.id}` : ''}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => data.map((item: IPhoto) => ({
+              id: item._id.toString(),
+              type: 'photo' as const,
+              item,
+              relevance: calculateRelevance(item, query, 'photo')
+            })))
+        )
+      }
+
+      // Search videos
+      if (contentType === 'all' || contentType === 'videos') {
+        searchPromises.push(
+          fetch(`/api/videos?search=${encodeURIComponent(query)}${user?.id ? `&userId=${user.id}` : ''}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => data.map((item: IVideo) => ({
+              id: item._id?.toString() || '',
+              type: 'video' as const,
+              item,
+              relevance: calculateRelevance(item, query, 'video')
+            })))
+        )
+      }
+
+      // Search journals
+      if (contentType === 'all' || contentType === 'journals') {
+        searchPromises.push(
+          fetch(`/api/journals?search=${encodeURIComponent(query)}${user?.id ? `&userId=${user.id}` : ''}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(data => data.map((item: IJournal) => ({
+              id: item._id.toString(),
+              type: 'journal' as const,
+              item,
+              relevance: calculateRelevance(item, query, 'journal')
+            })))
+        )
+      }
+
+      const allResults = await Promise.all(searchPromises)
+      const flattenedResults = allResults.flat()
+
+      // Sort results
+      if (sortBy === 'date') {
+        flattenedResults.sort((a, b) => {
+          const dateA = new Date(a.item.createdAt).getTime()
+          const dateB = new Date(b.item.createdAt).getTime()
+          return dateB - dateA
+        })
+      } else {
+        flattenedResults.sort((a, b) => b.relevance - a.relevance)
+      }
+
+      setResults(flattenedResults)
+    } catch (error) {
+      console.error('Search failed:', error)
+      setResults([])
+    } finally {
+      setSearchLoading(false)
+    }
+  }
+
+  const calculateRelevance = (item: any, searchQuery: string, type: string): number => {
+    const query = searchQuery.toLowerCase()
+    let score = 0
+
+    // Title match (highest weight)
+    if (item.title?.toLowerCase().includes(query)) {
+      score += 10
+    }
+
+    // Tag matches
+    if (item.tags) {
+      item.tags.forEach((tag: string) => {
+        if (tag.toLowerCase().includes(query)) {
+          score += 8
+        }
+      })
+    }
+
+    // Content/description matches
+    if (type === 'journal' && item.content?.toLowerCase().includes(query)) {
+      score += 6
+    }
+    if ((type === 'photo' || type === 'video') && item.description?.toLowerCase().includes(query)) {
+      score += 6
+    }
+
+    // Album/location matches
+    if (item.album?.toLowerCase().includes(query)) {
+      score += 4
+    }
+    if (item.location?.toLowerCase().includes(query)) {
+      score += 4
+    }
+
+    // Mood matches for journals
+    if (type === 'journal' && item.mood?.toLowerCase().includes(query)) {
+      score += 3
+    }
+
+    return score
+  }
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (query.trim()) {
+      performSearch()
+    }
+  }
+
+  if (loading) return <Loader fullscreen />
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-lg mb-4">Please login to search your content</p>
+          <a href="/auth/login" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+            Login
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 py-8">
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <div className="bg-black/20 backdrop-blur-sm border-b border-white/10 mb-8">
+          <div className="max-w-4xl mx-auto py-8">
+            <div className="flex items-center mb-6">
+              <svg className="w-8 h-8 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <h1 className="text-3xl font-bold text-white">Search Your Memory Journal</h1>
+            </div>
+
+            {/* Search Form */}
+            <form onSubmit={handleSearch} className="space-y-4">
+              <div className="flex gap-4">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search your photos, videos, and journals..."
+                  className="flex-1 px-6 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+                />
+                <button
+                  type="submit"
+                  disabled={!query.trim() || searchLoading}
+                  className="px-8 py-4 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25"
+                >
+                  {searchLoading ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm text-gray-300">Content Type:</label>
+                  <select
+                    value={contentType}
+                    onChange={(e) => setContentType(e.target.value as any)}
+                    className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all" className="bg-slate-800">All Content</option>
+                    <option value="photos" className="bg-slate-800">Photos Only</option>
+                    <option value="videos" className="bg-slate-800">Videos Only</option>
+                    <option value="journals" className="bg-slate-800">Journals Only</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm text-gray-300">Sort By:</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="relevance" className="bg-slate-800">Relevance</option>
+                    <option value="date" className="bg-slate-800">Date</option>
+                  </select>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* Results */}
+        <div className="space-y-8">
+          {searchLoading ? (
+            <div className="flex justify-center items-center min-h-[400px]">
+              <Loader message="Searching your memories..." />
+            </div>
+          ) : results.length > 0 ? (
+            <>
+              <div className="text-center">
+                <p className="text-gray-400">
+                  Found {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
+                </p>
+              </div>
+
+              {/* Group results by type */}
+              {['photo', 'video', 'journal'].map(type => {
+                const typeResults = results.filter(r => r.type === type)
+                if (typeResults.length === 0) return null
+
+                return (
+                  <div key={type}>
+                    <h2 className="text-2xl font-bold text-white mb-6 capitalize flex items-center">
+                      {type === 'photo' && <svg className="w-6 h-6 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                      {type === 'video' && <svg className="w-6 h-6 mr-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>}
+                      {type === 'journal' && <svg className="w-6 h-6 mr-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>}
+                      {type}s ({typeResults.length})
+                    </h2>
+
+                    <div className={`grid gap-6 ${
+                      type === 'photo' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' :
+                      type === 'video' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' :
+                      'space-y-6'
+                    }`}>
+                      {typeResults.map(result => (
+                        <div key={result.id}>
+                          {result.type === 'photo' && <PhotoCard photo={result.item as IPhoto} />}
+                          {result.type === 'video' && <VideoCard video={result.item as IVideo} />}
+                          {result.type === 'journal' && <JournalCard journal={result.item as IJournal} />}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </>
+          ) : query.trim() ? (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-12 border border-white/10 max-w-md">
+                <div className="w-20 h-20 bg-gray-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">No results found</h3>
+                <p className="text-gray-400 mb-8">
+                  Try adjusting your search terms or filters. You can search by title, description, tags, location, or mood.
+                </p>
+                <div className="text-sm text-gray-500">
+                  <p className="mb-2">Search tips:</p>
+                  <ul className="text-left space-y-1">
+                    <li>• Use specific keywords from your content</li>
+                    <li>• Try searching for tags (e.g., "vacation")</li>
+                    <li>• Search for locations (e.g., "Paris")</li>
+                    <li>• For journals, search for moods (e.g., "happy")</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+              <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-12 border border-white/10 max-w-md">
+                <div className="w-20 h-20 bg-blue-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">Search Your Memories</h3>
+                <p className="text-gray-400 mb-8">
+                  Enter a search term above to find your photos, videos, and journal entries across all your content.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
