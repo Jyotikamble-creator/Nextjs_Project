@@ -98,7 +98,7 @@ export default function Dashboard() {
           id: video._id?.toString() || '',
           type: 'video' as const,
           title: video.title,
-          createdAt: new Date(video.createdAt),
+          createdAt: new Date(video.createdAt || Date.now()),
           thumbnail: video.thumbnailUrl
         }))
       ].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 10)

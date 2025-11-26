@@ -35,8 +35,8 @@ export default function PhotosPage() {
         setPhotos(data)
 
         // Extract unique albums and tags
-        const uniqueAlbums = [...new Set(data.map((photo: IPhoto) => photo.album).filter(Boolean))]
-        const uniqueTags = [...new Set(data.flatMap((photo: IPhoto) => photo.tags || []))]
+        const uniqueAlbums = [...new Set(data.map((photo: IPhoto) => photo.album).filter(Boolean))] as string[]
+        const uniqueTags = [...new Set(data.flatMap((photo: IPhoto) => photo.tags || []))] as string[]
 
         setAlbums(uniqueAlbums)
         setTags(uniqueTags)
@@ -54,8 +54,8 @@ export default function PhotosPage() {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(photo =>
-        photo.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        photo.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (photo.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (photo.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         photo.tags?.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     }

@@ -3,7 +3,11 @@ import { Schema, model, models, type Document } from "mongoose"
 export interface IJournal extends Document {
   title: string
   content: string
-  author: Schema.Types.ObjectId // reference to User
+  author: Schema.Types.ObjectId | {
+    _id: Schema.Types.ObjectId
+    name: string
+    avatar?: string
+  }
   tags?: string[]
   attachments?: {
     type: "photo" | "video"

@@ -35,8 +35,8 @@ export default function JournalsPage() {
         setJournals(data)
 
         // Extract unique moods and tags
-        const uniqueMoods = [...new Set(data.map((journal: IJournal) => journal.mood).filter(Boolean))]
-        const uniqueTags = [...new Set(data.flatMap((journal: IJournal) => journal.tags || []))]
+        const uniqueMoods = [...new Set(data.map((journal: IJournal) => journal.mood).filter(Boolean))] as string[]
+        const uniqueTags = [...new Set(data.flatMap((journal: IJournal) => journal.tags || []))] as string[]
 
         setMoods(uniqueMoods)
         setTags(uniqueTags)
@@ -77,7 +77,7 @@ export default function JournalsPage() {
     if (!confirm('Are you sure you want to delete this journal entry?')) return
 
     try {
-      const response = await fetch(`/api/journals?id=${journalId}`, {
+      const response = await fetch(`/api/journals/${journalId}`, {
         method: 'DELETE'
       })
 

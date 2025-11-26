@@ -10,6 +10,7 @@ export const LogTags = {
   LOGIN: 'LOGIN',
   REGISTER: 'REGISTER',
   LOGOUT: 'LOGOUT',
+  AUTH: 'AUTH',
   AUTH_MIDDLEWARE: 'AUTH_MIDDLEWARE',
 
   // Video operations

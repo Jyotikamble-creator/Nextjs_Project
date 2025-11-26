@@ -12,7 +12,11 @@ export interface IVideo {
   description: string
   videoUrl: string
   thumbnailUrl: string
-  uploader: mongoose.Types.ObjectId // reference to User
+  uploader: mongoose.Types.ObjectId | {
+    _id: mongoose.Types.ObjectId
+    name: string
+    email?: string
+  }
   views?: number
   likes?: number
   tags?: string[]

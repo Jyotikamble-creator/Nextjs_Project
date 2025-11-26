@@ -31,7 +31,7 @@ export default function JournalDetailPage() {
 
   const fetchJournal = async () => {
     try {
-      const response = await fetch(`/api/journals?id=${params.id}`)
+      const response = await fetch(`/api/journals/${params.id}`)
       if (response.ok) {
         const data = await response.json()
         setJournal(data)
@@ -82,7 +82,7 @@ export default function JournalDetailPage() {
         isPublic: formData.isPublic
       }
 
-      const response = await fetch(`/api/journals?id=${journal._id}`, {
+      const response = await fetch(`/api/journals/${journal._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -109,7 +109,7 @@ export default function JournalDetailPage() {
     if (!journal || !confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) return
 
     try {
-      const response = await fetch(`/api/journals?id=${journal._id}`, {
+      const response = await fetch(`/api/journals/${journal._id}`, {
         method: 'DELETE'
       })
 

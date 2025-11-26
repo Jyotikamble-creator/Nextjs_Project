@@ -5,7 +5,11 @@ export interface IPhoto extends Document {
   description?: string
   url: string
   thumbnailUrl?: string
-  uploader: Schema.Types.ObjectId // reference to User
+  uploader: Schema.Types.ObjectId | {
+    _id: Schema.Types.ObjectId
+    name: string
+    avatar?: string
+  }
   fileId: string
   fileName: string
   size: number

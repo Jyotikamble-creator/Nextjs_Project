@@ -118,13 +118,13 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
               <div className="flex items-center text-sm text-gray-400 mb-4">
                 <span>{video.views || 0} views</span>
                 <span className="mx-2">•</span>
-                <span>{new Date(video.createdAt).toLocaleDateString()}</span>
-                {video.uploader && (
+                <span>{new Date(video.createdAt || Date.now()).toLocaleDateString()}</span>
+                {video.uploader && typeof video.uploader === 'object' && 'name' in video.uploader ? (
                   <>
                     <span className="mx-2">•</span>
                     <span>by {video.uploader.name || video.uploader.email}</span>
                   </>
-                )}
+                ) : null}
               </div>
             </div>
 

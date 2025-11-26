@@ -17,8 +17,8 @@ export default function PhotoCard({ photo }: PhotoCardProps) {
   }
 
   const getUploaderName = () => {
-    if (photo.author && typeof photo.author === 'object' && 'name' in photo.author) {
-      return photo.author.name
+    if (photo.uploader && typeof photo.uploader === 'object' && 'name' in photo.uploader) {
+      return photo.uploader.name
     }
     return 'Unknown'
   }
@@ -27,8 +27,8 @@ export default function PhotoCard({ photo }: PhotoCardProps) {
     <div className="group bg-white/5 backdrop-blur-lg rounded-xl border border-white/10 overflow-hidden hover:bg-white/10 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/10 cursor-pointer">
       <div className="relative w-full aspect-square">
         <Image
-          src={photo.thumbnailUrl || photo.imageUrl || "/placeholder.svg"}
-          alt={photo.title}
+          src={photo.thumbnailUrl || photo.url || "/placeholder.svg"}
+          alt={photo.title || 'Photo'}
           fill
           className="object-cover group-hover:scale-110 transition-transform duration-300"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
