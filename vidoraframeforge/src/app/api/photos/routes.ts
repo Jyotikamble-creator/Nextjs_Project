@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in photo fetch: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in photo fetch: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to fetch photos" }, { status: 500 })
   }
 }
@@ -158,16 +158,16 @@ export async function POST(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in photo creation: ${categorizedError.message}`);
+      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in photo creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in photo creation: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in photo creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo creation: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo creation: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to create photo" }, { status: 500 })
   }
 }
@@ -258,16 +258,16 @@ export async function PUT(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in photo update: ${categorizedError.message}`);
+      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in photo update: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in photo update: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in photo update: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo update: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo update: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to update photo" }, { status: 500 })
   }
 }
@@ -333,11 +333,11 @@ export async function DELETE(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in photo deletion: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in photo deletion: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo deletion: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo deletion: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to delete photo" }, { status: 500 })
   }
 }

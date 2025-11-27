@@ -5,7 +5,7 @@ import Journal from "@/server/models/Journal"
 import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
-import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/lib/validation"
+import { isValidVideoTitle, sanitizeString } from "@/lib/validation"
 import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in journal fetch: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in journal fetch: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to fetch journals" }, { status: 500 })
   }
 }
@@ -153,16 +153,16 @@ export async function POST(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in journal creation: ${categorizedError.message}`);
+      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in journal creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in journal creation: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in journal creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal creation: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal creation: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to create journal" }, { status: 500 })
   }
 }
@@ -261,16 +261,16 @@ export async function PUT(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in journal update: ${categorizedError.message}`);
+      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in journal update: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in journal update: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in journal update: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal update: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal update: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to update journal" }, { status: 500 })
   }
 }
@@ -336,11 +336,11 @@ export async function DELETE(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in journal deletion: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in journal deletion: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal deletion: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal deletion: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to delete journal" }, { status: 500 })
   }
 }
