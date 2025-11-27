@@ -4,11 +4,11 @@ import { useEffect, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import Loader from "@/components/common/Loader"
 import VideoCard from "@/components/video/VideoCard"
-import { IVideo } from "@/server/models/Video"
+import { Video } from "@/types/video/video"
 
 export default function VideosPage() {
   const { user, isAuthenticated, loading } = useAuth()
-  const [videos, setVideos] = useState<IVideo[]>([])
+  const [videos, setVideos] = useState<Video[]>([])
   const [videosLoading, setVideosLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")

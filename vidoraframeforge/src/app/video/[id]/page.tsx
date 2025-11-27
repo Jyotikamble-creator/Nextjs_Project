@@ -106,7 +106,6 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
           <VideoPlayer
             src={video.videoUrl}
             poster={video.thumbnailUrl}
-            title={video.title}
           />
         </div>
 

@@ -107,42 +107,93 @@ export default function SearchContent() {
   }
 
   const calculateRelevance = (item: IPhoto | IVideo | IJournal, searchQuery: string, type: string): number => {
-    const query = searchQuery.toLowerCase()
+    const query = searchQuery.toLowerCase().trim()
     let score = 0
 
-    // Title match (highest weight)
-    if (item.title?.toLowerCase().includes(query)) {
-      score += 10
+    // Skip empty queries
+    if (!query) return 0
+
+    // Title match (highest weight) - exact match gets higher score
+    if (item.title) {
+      const title = item.title.toLowerCase()
+      if (title === query) {
+        score += 20 // Exact title match
+      } else if (title.includes(query)) {
+        score += 10 // Partial title match
+        // Bonus for title starting with query
+        if (title.startsWith(query)) score += 5
+      }
     }
 
-    // Tag matches
-    if (item.tags) {
+    // Tag matches - each tag match adds points
+    if (item.tags && Array.isArray(item.tags)) {
       item.tags.forEach((tag: string) => {
-        if (tag.toLowerCase().includes(query)) {
-          score += 8
+        if (tag && typeof tag === 'string') {
+          const tagLower = tag.toLowerCase()
+          if (tagLower === query) {
+            score += 12 // Exact tag match
+          } else if (tagLower.includes(query)) {
+            score += 8 // Partial tag match
+          }
         }
       })
     }
 
-    // Content/description matches
-    if (type === 'journal' && item.content?.toLowerCase().includes(query)) {
-      score += 6
-    }
-    if ((type === 'photo' || type === 'video') && item.description?.toLowerCase().includes(query)) {
-      score += 6
-    }
-
-    // Album/location matches
-    if (item.album?.toLowerCase().includes(query)) {
-      score += 4
-    }
-    if (item.location?.toLowerCase().includes(query)) {
-      score += 4
+    // Content/description matches with proper type checking
+    if (type === 'journal' && 'content' in item && item.content) {
+      const content = item.content.toLowerCase()
+      const matches = (content.match(new RegExp(query, 'gi')) || []).length
+      if (matches > 0) {
+        score += Math.min(matches * 3, 15) // Up to 15 points for multiple matches
+        // Bonus for content starting with query
+        if (content.includes(query)) score += 2
+      }
     }
 
-    // Mood matches for journals
-    if (type === 'journal' && item.mood?.toLowerCase().includes(query)) {
-      score += 3
+    if ((type === 'photo' || type === 'video') && 'description' in item && item.description) {
+      const description = item.description.toLowerCase()
+      const matches = (description.match(new RegExp(query, 'gi')) || []).length
+      if (matches > 0) {
+        score += Math.min(matches * 3, 15) // Up to 15 points for multiple matches
+        // Bonus for description starting with query
+        if (description.includes(query)) score += 2
+      }
+    }
+
+    // Album/location matches with proper type checking
+    if ('album' in item && item.album) {
+      const album = item.album.toLowerCase()
+      if (album === query) {
+        score += 8 // Exact album match
+      } else if (album.includes(query)) {
+        score += 4 // Partial album match
+      }
+    }
+
+    if ('location' in item && item.location) {
+      const location = item.location.toLowerCase()
+      if (location === query) {
+        score += 8 // Exact location match
+      } else if (location.includes(query)) {
+        score += 4 // Partial location match
+      }
+    }
+
+    // Mood matches for journals with proper type checking
+    if (type === 'journal' && 'mood' in item && item.mood) {
+      const mood = item.mood.toLowerCase()
+      if (mood === query) {
+        score += 6 // Exact mood match
+      } else if (mood.includes(query)) {
+        score += 3 // Partial mood match
+      }
+    }
+
+    // Recency bonus (newer items get slight boost)
+    if (item.createdAt) {
+      const daysSinceCreation = (Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+      if (daysSinceCreation < 7) score += 2 // Less than a week old
+      else if (daysSinceCreation < 30) score += 1 // Less than a month old
     }
 
     return score
