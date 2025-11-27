@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useParams, useRouter } from "next/navigation"
 import Loader from "@/ui/Loader"
 import { IJournal } from "@/server/models/Journal"
+import { exportJournalToPDF, JournalExportData } from "@/utils/pdfExport"
 
 export default function JournalDetailPage() {
   const { user, isAuthenticated, loading } = useAuth()
@@ -106,22 +107,25 @@ export default function JournalDetailPage() {
     }
   }
 
-  const handleDelete = async () => {
-    if (!journal || !confirm('Are you sure you want to delete this journal entry? This action cannot be undone.')) return
+  const handleExportPDF = async () => {
+    if (!journal) return
 
     try {
-      const response = await fetch(`/api/journals/${journal._id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        router.push('/journals')
-      } else {
-        throw new Error('Failed to delete journal')
+      const exportData: JournalExportData = {
+        title: journal.title,
+        content: journal.content,
+        author: journal.author && typeof journal.author === 'object' && 'name' in journal.author ? journal.author.name : 'Unknown',
+        createdAt: journal.createdAt,
+        mood: journal.mood,
+        location: journal.location,
+        tags: journal.tags,
+        attachments: journal.attachments
       }
+
+      await exportJournalToPDF(exportData)
     } catch (error) {
-      console.error('Failed to delete journal:', error)
-      alert('Failed to delete journal')
+      console.error('Failed to export PDF:', error)
+      alert('Failed to export journal as PDF')
     }
   }
 
@@ -182,6 +186,15 @@ export default function JournalDetailPage() {
           </button>
 
           <div className="flex gap-2">
+            <button
+              onClick={handleExportPDF}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export PDF
+            </button>
             {!isEditing ? (
               <>
                 <button
@@ -393,20 +406,55 @@ export default function JournalDetailPage() {
               {journal.attachments && journal.attachments.length > 0 && (
                 <div className="mt-6 pt-6 border-t border-white/10">
                   <h3 className="text-lg font-semibold text-white mb-4">Attachments</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {journal.attachments.map((attachment, index) => (
-                      <div key={index} className="bg-white/10 rounded-lg p-4">
-                        <div className="flex items-center space-x-3">
-                          <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                          </svg>
-                          <div>
-                            <p className="text-white font-medium">Attachment {index + 1}</p>
-                            <p className="text-gray-400 text-sm">Click to view</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {journal.attachments.map((attachment, index) => {
+                      const isImage = attachment.fileType?.startsWith('image/')
+                      const isVideo = attachment.fileType?.startsWith('video/')
+
+                      return (
+                        <div key={index} className="bg-white/10 rounded-lg overflow-hidden">
+                          {isImage ? (
+                            <div className="aspect-video">
+                              <img
+                                src={attachment.url}
+                                alt={attachment.fileName || `Attachment ${index + 1}`}
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => window.open(attachment.url, '_blank')}
+                              />
+                            </div>
+                          ) : isVideo ? (
+                            <div className="aspect-video">
+                              <video
+                                src={attachment.url}
+                                controls
+                                className="w-full h-full object-cover"
+                                poster={attachment.thumbnailUrl}
+                              />
+                            </div>
+                          ) : (
+                            <div className="p-4">
+                              <div className="flex items-center space-x-3">
+                                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                </svg>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white font-medium truncate">{attachment.fileName || `Attachment ${index + 1}`}</p>
+                                  <p className="text-gray-400 text-sm">{attachment.fileType || 'Unknown type'}</p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          <div className="p-3 bg-white/5">
+                            <button
+                              onClick={() => window.open(attachment.url, '_blank')}
+                              className="w-full text-center text-sm text-green-400 hover:text-green-300 transition-colors"
+                            >
+                              View Full Size
+                            </button>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

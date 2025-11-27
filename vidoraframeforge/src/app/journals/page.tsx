@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import JournalCard from "@/components/journal/JournalCard"
 import Loader from "@/ui/Loader"
 import { IJournal } from "@/server/models/Journal"
+import { exportMultipleJournalsToPDF, JournalExportData } from "@/lib/utils/pdfExport"
 
 export default function JournalsPage() {
   const { user, isAuthenticated, loading } = useAuth()
@@ -74,22 +75,28 @@ export default function JournalsPage() {
     setFilteredJournals(filtered)
   }
 
-  const handleDeleteJournal = async (journalId: string) => {
-    if (!confirm('Are you sure you want to delete this journal entry?')) return
+  const handleExportAllPDF = async () => {
+    if (journals.length === 0) {
+      alert('No journals to export')
+      return
+    }
 
     try {
-      const response = await fetch(`/api/journals/${journalId}`, {
-        method: 'DELETE'
-      })
+      const exportData: JournalExportData[] = journals.map(journal => ({
+        title: journal.title,
+        content: journal.content,
+        author: journal.author && typeof journal.author === 'object' && 'name' in journal.author ? journal.author.name : 'Unknown',
+        createdAt: journal.createdAt,
+        mood: journal.mood,
+        location: journal.location,
+        tags: journal.tags,
+        attachments: journal.attachments
+      }))
 
-      if (response.ok) {
-        setJournals(journals.filter(journal => journal._id.toString() !== journalId))
-      } else {
-        alert('Failed to delete journal')
-      }
+      await exportMultipleJournalsToPDF(exportData)
     } catch (error) {
-      console.error('Failed to delete journal:', error)
-      alert('Failed to delete journal')
+      console.error('Failed to export journals:', error)
+      alert('Failed to export journals as PDF')
     }
   }
 
@@ -192,11 +199,21 @@ export default function JournalsPage() {
               </select>
             </div>
 
-            {/* Create Journal Button */}
-            <div className="flex items-end">
+            {/* Action Buttons */}
+            <div className="flex items-end gap-3">
+              <button
+                onClick={handleExportAllPDF}
+                disabled={journals.length === 0}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 disabled:cursor-not-allowed disabled:transform-none flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export All PDF
+              </button>
               <Link
                 href="/create-journal"
-                className="w-full inline-flex items-center justify-center px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
+                className="inline-flex items-center justify-center px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

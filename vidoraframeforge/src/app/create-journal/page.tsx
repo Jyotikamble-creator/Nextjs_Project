@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation"
 export default function CreateJournalPage() {
   const { isAuthenticated, loading, user } = useAuth()
   const router = useRouter()
-  const [saving, setSaving] = useState(false)
+  const [attachments, setAttachments] = useState<File[]>([])
+  const [uploadingAttachments, setUploadingAttachments] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -41,13 +42,62 @@ export default function CreateJournalPage() {
     }))
   }
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const validFiles = files.filter(file => {
+      const isValidType = file.type.startsWith('image/') || file.type.startsWith('video/')
+      const isValidSize = file.size <= 50 * 1024 * 1024 // 50MB limit
+      return isValidType && isValidSize
+    })
+
+    if (validFiles.length !== files.length) {
+      alert('Some files were skipped. Only images and videos under 50MB are allowed.')
+    }
+
+    setAttachments(prev => [...prev, ...validFiles].slice(0, 5)) // Max 5 attachments
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.title.trim() || !formData.content.trim()) return
 
     setSaving(true)
+    setUploadingAttachments(true)
 
     try {
+      // Upload attachments to ImageKit
+      const uploadedAttachments = []
+      for (const file of attachments) {
+        const formDataUpload = new FormData()
+        formDataUpload.append('file', file)
+        formDataUpload.append('fileName', file.name)
+        formDataUpload.append('folder', `/users/${user?.id}/journals`)
+
+        const uploadResponse = await fetch('/api/imagekit-auth', {
+          method: 'POST',
+          body: formDataUpload
+        })
+
+        if (uploadResponse.ok) {
+          const uploadData = await uploadResponse.json()
+          uploadedAttachments.push({
+            type: file.type.startsWith('image/') ? 'photo' : 'video',
+            url: uploadData.url,
+            thumbnailUrl: uploadData.thumbnail || uploadData.url,
+            fileId: uploadData.fileId,
+            fileName: file.name,
+            size: file.size
+          })
+        }
+      }
+
+      setUploadingAttachments(false)
+
+      // Create journal with attachments
       const journalData = {
         title: formData.title.trim(),
         content: formData.content.trim(),
@@ -55,7 +105,7 @@ export default function CreateJournalPage() {
         mood: formData.mood || undefined,
         location: formData.location || undefined,
         isPublic: formData.isPublic,
-        attachments: [] // Could be extended to add photo attachments later
+        attachments: uploadedAttachments
       }
 
       const response = await fetch('/api/journals', {
@@ -76,6 +126,7 @@ export default function CreateJournalPage() {
       alert('Save failed. Please try again.')
     } finally {
       setSaving(false)
+      setUploadingAttachments(false)
     }
   }
 
@@ -191,6 +242,83 @@ export default function CreateJournalPage() {
               />
             </div>
 
+            {/* Attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Attachments (optional)
+              </label>
+              <div className="space-y-4">
+                {/* File Upload */}
+                <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-green-400 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={handleFileSelect}
+                    multiple
+                    className="hidden"
+                    id="attachments-upload"
+                  />
+                  <label htmlFor="attachments-upload" className="cursor-pointer">
+                    <div className="space-y-4">
+                      <svg className="w-12 h-12 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <div>
+                        <p className="text-lg text-white">Add photos or videos</p>
+                        <p className="text-gray-400">Click to browse or drag and drop</p>
+                        <p className="text-sm text-gray-500 mt-1">Max 5 files, 50MB each</p>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Attachment Previews */}
+                {attachments.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {attachments.map((file, index) => (
+                      <div key={index} className="relative group">
+                        {file.type.startsWith('image/') ? (
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-24 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-full h-24 bg-gray-700 rounded-lg flex items-center justify-center">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeAttachment(index)}
+                          className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <p className="text-xs text-gray-400 mt-1 truncate">{file.name}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {uploadingAttachments && (
+                  <div className="text-center py-4">
+                    <div className="inline-flex items-center text-green-400">
+                      <svg className="animate-spin -ml-1 mr-3 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading attachments...
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Public/Private */}
             <div className="flex items-center">
               <input
@@ -217,10 +345,10 @@ export default function CreateJournalPage() {
               </button>
               <button
                 type="submit"
-                disabled={!formData.title.trim() || !formData.content.trim() || saving}
+                disabled={!formData.title.trim() || !formData.content.trim() || saving || uploadingAttachments}
                 className="px-6 py-3 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-green-500/25"
               >
-                {saving ? 'Saving...' : 'Save Journal Entry'}
+                {uploadingAttachments ? 'Uploading...' : saving ? 'Saving...' : 'Save Journal Entry'}
               </button>
             </div>
           </form>
