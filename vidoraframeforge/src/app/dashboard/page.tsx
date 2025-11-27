@@ -207,52 +207,48 @@ export default function Dashboard() {
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
       <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2">My Memory Journal</h1>
-              <p className="text-gray-300">Track your memories, photos, and stories</p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-0">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-1 sm:mb-2 truncate">My Memory Journal</h1>
+              <p className="text-gray-300 text-sm sm:text-base">Track your memories, photos, and stories</p>
             </div>
-            <div className="flex flex-wrap gap-2 sm:gap-4">
+            <div className="flex flex-wrap gap-2 sm:gap-3 lg:gap-4 w-full sm:w-auto justify-end">
               <button
                 onClick={handleExportDataPDF}
-                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25 text-sm"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center px-2 sm:px-3 lg:px-4 py-2 bg-linear-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25 text-xs sm:text-sm min-w-0"
               >
-                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                <span className="hidden sm:inline">Export Data</span>
-                <span className="sm:hidden">Export</span>
+                <span className="truncate">Export</span>
               </button>
               <Link
                 href="/upload-video"
-                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25 text-sm"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center px-2 sm:px-3 lg:px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25 text-xs sm:text-sm min-w-0"
               >
-                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                <span className="hidden sm:inline">Upload Video</span>
-                <span className="sm:hidden">Video</span>
+                <span className="truncate">Video</span>
               </Link>
               <Link
                 href="/upload-photo"
-                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 text-sm"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center px-2 sm:px-3 lg:px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 text-xs sm:text-sm min-w-0"
               >
-                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className="hidden sm:inline">Upload Photo</span>
-                <span className="sm:hidden">Photo</span>
+                <span className="truncate">Photo</span>
               </Link>
               <Link
                 href="/create-journal"
-                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25 text-sm"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center px-2 sm:px-3 lg:px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25 text-xs sm:text-sm min-w-0"
               >
-                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <span className="hidden sm:inline">Write Journal</span>
-                <span className="sm:hidden">Journal</span>
+                <span className="truncate">Journal</span>
               </Link>
             </div>
           </div>
@@ -260,66 +256,66 @@ export default function Dashboard() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex flex-wrap bg-white/5 backdrop-blur-lg rounded-lg p-1 border border-white/10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4">
+        <div className="flex flex-wrap bg-white/5 backdrop-blur-lg rounded-lg p-1 border border-white/10 gap-1">
           <Link
             href="/dashboard"
-            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-white/10 rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-white/10 rounded-md transition-colors"
           >
-            Overview
+            <span className="truncate">Overview</span>
           </Link>
           <Link
             href="/photos"
-            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
-            Photos
+            <span className="truncate">Photos</span>
           </Link>
           <Link
             href="/video"
-            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
-            Videos
+            <span className="truncate">Videos</span>
           </Link>
           <Link
             href="/journals"
-            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
-            Journals
+            <span className="truncate">Journals</span>
           </Link>
           <Link
             href="/search"
-            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
-            Search
+            <span className="truncate">Search</span>
           </Link>
           <Link
             href="/settings"
-            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
-            Settings
+            <span className="truncate">Settings</span>
           </Link>
         </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {statsLoading ? (
-            <div className="col-span-4 flex justify-center">
+            <div className="col-span-2 sm:col-span-2 lg:col-span-4 flex justify-center">
               <Loader message="Loading statistics..." />
             </div>
           ) : stats ? (
             <>
-              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/10">
                 <ProgressChart value={stats.totalPhotos} max={100} label="Photos" color="text-blue-400" />
               </div>
-              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/10">
                 <ProgressChart value={stats.totalVideos} max={50} label="Videos" color="text-purple-400" />
               </div>
-              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/10">
                 <ProgressChart value={stats.totalJournals} max={200} label="Journals" color="text-green-400" />
               </div>
-              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
+              <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/10">
                 <ProgressChart value={stats.streak} max={30} label="Day Streak" color="text-yellow-400" />
               </div>
             </>
@@ -327,20 +323,20 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
           {/* Activity Feed */}
-          <div className="lg:col-span-1">
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
-              <div className="space-y-4">
+          <div className="xl:col-span-1 order-2 xl:order-1">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/10">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Recent Activity</h3>
+              <div className="space-y-3 sm:space-y-4">
                 {activityLoading ? (
-                  <div className="flex justify-center items-center py-8">
+                  <div className="flex justify-center items-center py-6 sm:py-8">
                     <Loader message="Loading activity..." />
                   </div>
                 ) : activity.length > 0 ? (
                   activity.map((item) => (
                     <div key={item.id} className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                         item.type === 'photo' ? 'bg-blue-600' :
                         item.type === 'video' ? 'bg-purple-600' : 'bg-green-600'
                       }`}>
@@ -367,22 +363,22 @@ export default function Dashboard() {
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-400 text-center py-8">No recent activity</p>
+                  <p className="text-gray-400 text-center py-6 sm:py-8">No recent activity</p>
                 )}
               </div>
             </div>
           </div>
 
           {/* Videos Grid */}
-          <div className="lg:col-span-2">
-            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
-              <h3 className="text-xl font-bold text-white mb-4">My Videos</h3>
+          <div className="xl:col-span-2 order-1 xl:order-2">
+            <div className="bg-white/5 backdrop-blur-lg rounded-xl p-4 sm:p-6 border border-white/10">
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-4">My Videos</h3>
               {videosLoading ? (
                 <div className="flex justify-center items-center min-h-[200px]">
                   <Loader message="Loading your videos..." />
                 </div>
               ) : videos.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {videos.slice(0, 4).map((video) => (
                     <VideoCard
                       key={video._id?.toString() || Math.random().toString()}
@@ -392,16 +388,16 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center min-h-[200px] text-center">
-                  <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-6 h-6 sm:w-8 sm:h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h4 className="text-lg font-semibold text-white mb-2">No videos yet</h4>
-                  <p className="text-gray-400 mb-4">Start sharing your stories with the world.</p>
+                  <h4 className="text-base sm:text-lg font-semibold text-white mb-2">No videos yet</h4>
+                  <p className="text-gray-400 mb-4 text-sm sm:text-base">Start sharing your stories with the world.</p>
                   <Link
                     href="/upload-video"
-                    className="inline-flex items-center px-6 py-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                    className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25 text-sm sm:text-base"
                   >
                     Upload Your First Video
                   </Link>
