@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in video fetch: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in video fetch: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to fetch videos" }, { status: 500 })
   }
 }
@@ -146,16 +146,16 @@ export async function POST(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in video creation: ${categorizedError.message}`);
+      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in video creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in video creation: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in video creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in video creation: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in video creation: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to create video" }, { status: 500 })
   }
 }

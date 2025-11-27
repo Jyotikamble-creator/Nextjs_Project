@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth"
 import { connectionToDatabase } from "@/server/db"
 import Video from "@/server/models/Video"
 import { authOptions } from "@/server/auth-config/auth"
-import { Logger, LogTags, categorizeError, DatabaseError, ValidationError } from "@/lib/logger"
+import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
 export async function DELETE(
   request: NextRequest,
@@ -56,11 +56,11 @@ export async function DELETE(
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in video deletion: ${categorizedError.message}`);
+      Logger.e(LogTags.DB_ERROR, `Database error in video deletion: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_DELETE, `Unexpected error in video deletion: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.VIDEO_DELETE, `Unexpected error in video deletion: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to delete video" }, { status: 500 })
   }
 }
