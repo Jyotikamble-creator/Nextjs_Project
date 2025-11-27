@@ -1,18 +1,23 @@
 import Link from 'next/link';
-import { Video, Upload, User } from 'lucide-react';
-
-const navLinkClasses = "text-gray-300 hover:text-white transition-colors duration-200";
+import Image from 'next/image';
+import { Upload, User } from 'lucide-react';
 
 export default function Header() {
   const isLoggedIn = false;
-  const logout = () => {};
 
   return (
     <header className="container mx-auto px-4 pt-6">
       <nav className="flex justify-around items-center">
 
         <div className="flex items-center">
-          <img src="/images/logo.png" alt="VidoraFrameForge Logo" className="w-12 h-12 md:w-16 md:h-16 rounded-full" />
+          <div className="relative w-12 h-12 md:w-16 md:h-16">
+            <Image
+              src="/images/logo.png"
+              alt="VidoraFrameForge Logo"
+              fill
+              className="rounded-full object-cover"
+            />
+          </div>
         </div>
 
         <div>
