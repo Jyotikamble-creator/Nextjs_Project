@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { useParams, useRouter } from "next/navigation"
-import Loader from "@/components/common/Loader"
+import Loader from "@/ui/Loader"
 import { IJournal } from "@/server/models/Journal"
 
 export default function JournalDetailPage() {

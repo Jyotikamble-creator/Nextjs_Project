@@ -1,5 +1,5 @@
 import { Upload } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/ui/Button";
 
 interface EmptyStateProps {
   onUploadClick: () => void;

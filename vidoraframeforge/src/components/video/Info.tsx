@@ -1,7 +1,7 @@
 "use client";
 
 import { ThumbsUp, ThumbsDown, Share2, BookmarkPlus } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/ui/Button";
 import { Video } from "@/types/video/video";
 import { formatViews, formatSubscribers } from "@/lib/utils";
 

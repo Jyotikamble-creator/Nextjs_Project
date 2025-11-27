@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import PhotoCard from "@/components/photo/PhotoCard"
-import Loader from "@/components/common/Loader"
+import Loader from "@/ui/Loader"
 import { IPhoto } from "@/server/models/Photo"
 
 export default function PhotosPage() {

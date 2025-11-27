@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { Select } from "@/components/ui/Select";
+import { Input } from "@/ui/Input";
+import { Textarea } from "@/ui/Textarea";
+import { Select } from "@/ui/Select";
 
 interface VideoDetailsFormProps {
   title: string;

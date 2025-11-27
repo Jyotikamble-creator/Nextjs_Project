@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useAuth } from "@/context/AuthContext"
-import Loader from "@/components/common/Loader"
+import Loader from "@/ui/Loader"
 import { useRouter } from "next/navigation"
 
 export default function CreateJournalPage() {

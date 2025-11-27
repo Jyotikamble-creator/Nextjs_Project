@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { useSearchParams } from "next/navigation"
-import Loader from "@/components/common/Loader"
+import Loader from "@/ui/Loader"
 import PhotoCard from "@/components/photo/PhotoCard"
 import VideoCard from "@/components/video/VideoCard"
 import JournalCard from "@/components/journal/JournalCard"

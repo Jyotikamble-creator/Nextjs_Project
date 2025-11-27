@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/AuthContext"
-import Loader from "@/components/common/Loader"
+import Loader from "@/ui/Loader"
 import VideoCard from "@/components/video/VideoCard"
 import { Video } from "@/types/video/video"
 

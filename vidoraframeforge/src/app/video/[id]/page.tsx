@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import Loader from "@/components/common/Loader";
+import Loader from "@/ui/Loader";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import { IVideo } from "@/server/models/Video";
 

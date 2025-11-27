@@ -3,7 +3,7 @@
 
 import { useAuth } from "@/context/AuthContext"
 import FileUpload from "@/components/FileUpload"
-import Loader from "@/components/common/Loader"
+import Loader from "@/ui/Loader"
 
 export default function UploadPage() {
   const { isAuthenticated, loading } = useAuth()

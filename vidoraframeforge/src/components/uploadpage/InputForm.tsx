@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { CloudUpload } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/ui/Button";
 import { isValidVideoFile, isValidFileSize } from "@/lib/uploadHelpers";
 
 interface FileUploadZoneProps {
