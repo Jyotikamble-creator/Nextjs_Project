@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.REGISTER, `Unexpected error in registration: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.REGISTER, `Unexpected error in registration: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }
 }

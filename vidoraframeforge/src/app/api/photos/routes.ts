@@ -6,6 +6,7 @@ import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/lib/validation"
+import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.VIDEO_FETCH, 'Photo fetch request received');
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (userId) {
-      query.uploader = userId
+      query.uploader = new mongoose.Types.ObjectId(userId)
       Logger.d(LogTags.VIDEO_FETCH, 'User-specific photo fetch', { userId });
     }
 

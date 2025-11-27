@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.AUTH, `Unexpected error in user stats fetch: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.AUTH, `Unexpected error in user stats fetch: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to fetch user stats" }, { status: 500 })
   }
 }

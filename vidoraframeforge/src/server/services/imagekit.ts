@@ -68,7 +68,7 @@ export const imagekitService = {
   },
 
   // Generate URL for transformations (simplified)
-  generateUrl: (path: string, transformations?: Array<Record<string, any>>) => {
+  generateUrl: (path: string, transformations?: Array<Record<string, string | number>>) => {
     try {
       return imagekit.url({
         path,

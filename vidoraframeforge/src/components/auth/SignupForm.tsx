@@ -46,7 +46,7 @@ export default function SignupForm() {
   }
 
   const validateForm = (): boolean => {
-    const newErrors: any = {}
+    const newErrors: Record<string, string> = {}
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required"

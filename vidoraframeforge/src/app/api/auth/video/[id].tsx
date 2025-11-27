@@ -18,13 +18,11 @@ export default function VideoDetailPage() {
   return (
     <div className="p-4">
       <VideoPlayer src={video.videoUrl} />
-      <h2 className="text-xl mt-4">
-        Title: {video.title}</h2>
-      <p> Description:{video.description}</p>
+      <h2 className="text-xl mt-4">Title: {video.title}</h2>
+      <p>Description: {video.description}</p>
       <p>Views: {video.views}</p>
       <p>Duration: {video.duration}</p>
       <p>Uploaded by: {video.uploadedBy?.email}</p>
-
     </div>
   );
 }

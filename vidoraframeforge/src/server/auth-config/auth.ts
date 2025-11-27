@@ -6,6 +6,13 @@ import * as bcrypt from "bcryptjs"
 import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError, AuthenticationError } from "@/lib/logger"
 import { isValidEmail } from "@/lib/validation"
 
+interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -89,10 +96,11 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.role = (user as any).role || 'user'
+        const authUser = user as AuthUser;
+        token.id = authUser.id;
+        token.role = authUser.role || 'user';
       }
-      return token
+      return token;
     },
     async session({ session, token }) {
       if (token) {

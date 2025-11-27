@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import VideoCard from "@/components/video/VideoCard"
 import { fetchUserVideos } from "@/server/services/videoService"
@@ -171,7 +172,7 @@ export default function Dashboard() {
               <p className="text-gray-300">Track your memories, photos, and stories</p>
             </div>
             <div className="flex gap-4">
-              <a
+              <Link
                 href="/upload"
                 className="inline-flex items-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
               >
@@ -179,8 +180,8 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
                 Upload Video
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/upload-photo"
                 className="inline-flex items-center px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
               >
@@ -188,8 +189,8 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 Upload Photo
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/create-journal"
                 className="inline-flex items-center px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
               >
@@ -197,7 +198,7 @@ export default function Dashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 Write Journal
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -206,36 +207,36 @@ export default function Dashboard() {
       {/* Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex space-x-1 bg-white/5 backdrop-blur-lg rounded-lg p-1 border border-white/10">
-          <a
+          <Link
             href="/dashboard"
             className="flex-1 text-center px-4 py-2 text-sm font-medium text-white bg-white/10 rounded-md transition-colors"
           >
             Overview
-          </a>
-          <a
+          </Link>
+          <Link
             href="/photos"
             className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Photos
-          </a>
-          <a
+          </Link>
+          <Link
             href="/videos"
             className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Videos
-          </a>
-          <a
+          </Link>
+          <Link
             href="/journals"
             className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Journals
-          </a>
-          <a
+          </Link>
+          <Link
             href="/search"
             className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Search
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -333,12 +334,12 @@ export default function Dashboard() {
                   </div>
                   <h4 className="text-lg font-semibold text-white mb-2">No videos yet</h4>
                   <p className="text-gray-400 mb-4">Start sharing your stories with the world.</p>
-                  <a
+                  <Link
                     href="/upload"
                     className="inline-flex items-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   >
                     Upload Your First Video
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>

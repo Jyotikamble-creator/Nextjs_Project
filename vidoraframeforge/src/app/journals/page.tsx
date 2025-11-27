@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import JournalCard from "@/components/journal/JournalCard"
 import Loader from "@/components/common/Loader"
@@ -99,9 +100,9 @@ export default function JournalsPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-lg mb-4">Please login to view your journals</p>
-          <a href="/auth/login" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+          <Link href="/auth/login" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
             Login
-          </a>
+          </Link>
         </div>
       </div>
     )
@@ -193,7 +194,7 @@ export default function JournalsPage() {
 
             {/* Create Journal Button */}
             <div className="flex items-end">
-              <a
+              <Link
                 href="/create-journal"
                 className="w-full inline-flex items-center justify-center px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
               >
@@ -201,7 +202,7 @@ export default function JournalsPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
                 Write Journal
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -263,7 +264,7 @@ export default function JournalsPage() {
                 }
               </p>
               {journals.length === 0 && (
-                <a
+                <Link
                   href="/create-journal"
                   className="inline-flex items-center px-6 py-3 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
                 >
@@ -271,7 +272,7 @@ export default function JournalsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   Write Your First Journal
-                </a>
+                </Link>
               )}
             </div>
           </div>

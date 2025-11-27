@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getUploadAuthParams } from "@imagekit/next/server"
 import { Logger, LogTags, categorizeError } from "@/lib/logger";
 
@@ -25,7 +25,7 @@ export async function GET() {
     })
   } catch (error) {
     const categorizedError = categorizeError(error);
-    Logger.e(LogTags.IMAGEKIT_AUTH, `ImageKit auth error: ${categorizedError.message}`, categorizedError);
+    Logger.e(LogTags.IMAGEKIT_AUTH, `ImageKit auth error: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({
       error: "Authentication for ImageKit failed"
     }, { status: 500 })

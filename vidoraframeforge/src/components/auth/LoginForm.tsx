@@ -28,7 +28,7 @@ export const LoginForm = () => {
   }, [searchParams]);
 
   const validateForm = (): boolean => {
-    const newErrors: any = {};
+    const newErrors: Record<string, string | React.ReactNode> = {};
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";

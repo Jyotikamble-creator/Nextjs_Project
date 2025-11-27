@@ -106,7 +106,7 @@ export default function SearchContent() {
     }
   }
 
-  const calculateRelevance = (item: any, searchQuery: string, type: string): number => {
+  const calculateRelevance = (item: IPhoto | IVideo | IJournal, searchQuery: string, type: string): number => {
     const query = searchQuery.toLowerCase()
     let score = 0
 
@@ -208,7 +208,7 @@ export default function SearchContent() {
                   <label className="text-sm text-gray-300">Content Type:</label>
                   <select
                     value={contentType}
-                    onChange={(e) => setContentType(e.target.value as any)}
+                    onChange={(e) => setContentType(e.target.value as 'all' | 'photos' | 'videos' | 'journals')}
                     className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all" className="bg-slate-800">All Content</option>
@@ -222,7 +222,7 @@ export default function SearchContent() {
                   <label className="text-sm text-gray-300">Sort By:</label>
                   <select
                     value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
+                    onChange={(e) => setSortBy(e.target.value as 'relevance' | 'date')}
                     className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="relevance" className="bg-slate-800">Relevance</option>
@@ -244,7 +244,7 @@ export default function SearchContent() {
             <>
               <div className="text-center">
                 <p className="text-gray-400">
-                  Found {results.length} result{results.length !== 1 ? 's' : ''} for "{query}"
+                  Found {results.length} result{results.length !== 1 ? 's' : ''} for &quot;{query}&quot;
                 </p>
               </div>
 
@@ -295,9 +295,9 @@ export default function SearchContent() {
                   <p className="mb-2">Search tips:</p>
                   <ul className="text-left space-y-1">
                     <li>• Use specific keywords from your content</li>
-                    <li>• Try searching for tags (e.g., "vacation")</li>
-                    <li>• Search for locations (e.g., "Paris")</li>
-                    <li>• For journals, search for moods (e.g., "happy")</li>
+                    <li>• Try searching for tags (e.g., &quot;vacation&quot;)</li>
+                    <li>• Search for locations (e.g., &quot;Paris&quot;)</li>
+                    <li>• For journals, search for moods (e.g., &quot;happy&quot;)</li>
                   </ul>
                 </div>
               </div>

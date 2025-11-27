@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { useParams, useRouter } from "next/navigation"
 import Loader from "@/components/common/Loader"
@@ -144,9 +145,9 @@ export default function JournalDetailPage() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-lg mb-4">Journal not found</p>
-          <a href="/journals" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+          <Link href="/journals" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
             Back to Journals
-          </a>
+          </Link>
         </div>
       </div>
     )

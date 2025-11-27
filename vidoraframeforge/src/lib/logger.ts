@@ -50,9 +50,9 @@ export type LogTag = typeof LogTags[keyof typeof LogTags];
 export class ClientRequestError extends Error {
   public status: number;
   public statusText: string;
-  public response?: any;
+  public response?: unknown;
 
-  constructor(message: string, status: number, statusText: string, response?: any) {
+  constructor(message: string, status: number, statusText: string, response?: unknown) {
     super(message);
     this.name = 'ClientRequestError';
     this.status = status;
@@ -64,9 +64,9 @@ export class ClientRequestError extends Error {
 export class ServerResponseError extends Error {
   public status: number;
   public statusText: string;
-  public response?: any;
+  public response?: unknown;
 
-  constructor(message: string, status: number, statusText: string, response?: any) {
+  constructor(message: string, status: number, statusText: string, response?: unknown) {
     super(message);
     this.name = 'ServerResponseError';
     this.status = status;
@@ -129,7 +129,7 @@ export function categorizeError(error: unknown): Error {
 
   // Type guard for objects with HTTP status properties
   const hasStatus = (err: unknown): err is { status: number; message?: string; statusText?: string; response?: unknown } => {
-    return typeof err === 'object' && err !== null && 'status' in err && typeof (err as any).status === 'number';
+    return typeof err === 'object' && err !== null && 'status' in err && typeof (err as { status: unknown }).status === 'number';
   };
 
   if (isError(error)) {
