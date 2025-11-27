@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import VideoCard from "@/components/video/VideoCard"
-import { fetchUserVideos } from "@/server/services/videoService"
 import Loader from "@/ui/Loader"
 import { IVideo } from "@/server/models/Video"
 import { IPhoto } from "@/server/models/Photo"
@@ -36,14 +35,12 @@ export default function Dashboard() {
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [videosLoading, setVideosLoading] = useState(true)
   const [statsLoading, setStatsLoading] = useState(true)
+  const [activityLoading, setActivityLoading] = useState(true)
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
       // Fetch videos
-      fetchUserVideos(user.id)
-        .then(setVideos)
-        .catch(console.error)
-        .finally(() => setVideosLoading(false))
+      fetchUserVideos()
 
       // Fetch user stats
       fetchUserStats()
@@ -51,7 +48,26 @@ export default function Dashboard() {
       // Fetch recent activity
       fetchRecentActivity()
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated, user?.id]) // More specific dependency
+
+  const fetchUserVideos = async () => {
+    try {
+      setVideosLoading(true)
+      const response = await fetch(`/api/auth/videos?userId=${user?.id}`)
+      if (response.ok) {
+        const data = await response.json()
+        setVideos(data)
+      } else {
+        console.error("Failed to fetch videos")
+        setVideos([])
+      }
+    } catch (error) {
+      console.error("Error fetching videos:", error)
+      setVideos([])
+    } finally {
+      setVideosLoading(false)
+    }
+  }
 
   const fetchUserStats = async () => {
     try {
@@ -69,6 +85,7 @@ export default function Dashboard() {
 
   const fetchRecentActivity = async () => {
     try {
+      setActivityLoading(true)
       // Fetch recent photos
       const photosResponse = await fetch(`/api/photos?userId=${user?.id}&limit=5`)
       const photosData = photosResponse.ok ? await photosResponse.json() : []
@@ -108,6 +125,9 @@ export default function Dashboard() {
       setActivity(allActivity)
     } catch (error) {
       console.error('Failed to fetch recent activity:', error)
+      setActivity([])
+    } finally {
+      setActivityLoading(false)
     }
   }
 
@@ -171,7 +191,9 @@ export default function Dashboard() {
     )
   }
 
-  if (loading) return <Loader fullscreen message="Loading dashboard..." />
+  if (loading || videosLoading || statsLoading || activityLoading) {
+    return <Loader fullscreen message="Loading dashboard..." />
+  }
 
   if (!isAuthenticated) {
     return (
@@ -202,7 +224,7 @@ export default function Dashboard() {
                 Export Data
               </button>
               <Link
-                href="/upload"
+                href="/upload-video"
                 className="inline-flex items-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,7 +271,7 @@ export default function Dashboard() {
             Photos
           </Link>
           <Link
-            href="/videos"
+            href="/video"
             className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Videos
@@ -307,7 +329,11 @@ export default function Dashboard() {
             <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10">
               <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
               <div className="space-y-4">
-                {activity.length > 0 ? (
+                {activityLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader message="Loading activity..." />
+                  </div>
+                ) : activity.length > 0 ? (
                   activity.map((item) => (
                     <div key={item.id} className="flex items-center space-x-3 p-3 bg-white/5 rounded-lg">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -370,8 +396,8 @@ export default function Dashboard() {
                   <h4 className="text-lg font-semibold text-white mb-2">No videos yet</h4>
                   <p className="text-gray-400 mb-4">Start sharing your stories with the world.</p>
                   <Link
-                    href="/upload"
-                    className="inline-flex items-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                    href="/upload-video"
+                    className="inline-flex items-center px-6 py-3 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
                   >
                     Upload Your First Video
                   </Link>

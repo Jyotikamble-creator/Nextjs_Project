@@ -28,7 +28,7 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
         setVideo(data);
       } else if (response.status === 404) {
         console.error("Video not found");
-        router.push("/videos");
+        router.push("/video");
       } else {
         console.error("Failed to fetch video");
       }
@@ -48,7 +48,7 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
       });
 
       if (response.ok) {
-        router.push("/videos");
+        router.push("/video");
       } else {
         console.error("Failed to delete video");
       }
@@ -77,7 +77,7 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <p className="text-lg mb-4">Video not found</p>
-          <a href="/videos" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
+          <a href="/video" className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
             Back to Videos
           </a>
         </div>
@@ -91,7 +91,7 @@ export default function VideoDetailPage({ params }: { params: { id: string } }) 
         {/* Back Button */}
         <div className="mb-6">
           <button
-            onClick={() => router.push("/videos")}
+            onClick={() => router.push("/video")}
             className="flex items-center text-gray-400 hover:text-white transition-colors"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
