@@ -222,67 +222,73 @@ export default function SearchContent() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 py-8">
-      <div className="max-w-7xl mx-auto px-6">
-        {/* Header */}
-        <div className="bg-black/20 backdrop-blur-sm border-b border-white/10 mb-8">
-          <div className="max-w-4xl mx-auto py-8">
-            <div className="flex items-center mb-6">
-              <svg className="w-8 h-8 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <h1 className="text-3xl font-bold text-white">Search Your Memory Journal</h1>
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-bold text-white mb-2">Search Results</h1>
+              <p className="text-gray-300">Find your cherished memories across all your photos, videos, and journal entries</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold text-white">{results.length}</p>
+              <p className="text-gray-400 text-sm">Results Found</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Search Form */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="max-w-4xl mx-auto mb-8">
+          <form onSubmit={handleSearch} className="space-y-4">
+            <div className="flex gap-4">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search your photos, videos, and journals..."
+                className="flex-1 px-6 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
+              />
+              <button
+                type="submit"
+                disabled={!query.trim() || searchLoading}
+                className="px-8 py-4 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25"
+              >
+                {searchLoading ? 'Searching...' : 'Search'}
+              </button>
             </div>
 
-            {/* Search Form */}
-            <form onSubmit={handleSearch} className="space-y-4">
-              <div className="flex gap-4">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search your photos, videos, and journals..."
-                  className="flex-1 px-6 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
-                />
-                <button
-                  type="submit"
-                  disabled={!query.trim() || searchLoading}
-                  className="px-8 py-4 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25"
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 items-center justify-center">
+              <div className="flex items-center space-x-2">
+                <label className="text-sm text-gray-300">Content Type:</label>
+                <select
+                  value={contentType}
+                  onChange={(e) => setContentType(e.target.value as 'all' | 'photos' | 'videos' | 'journals')}
+                  className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {searchLoading ? 'Searching...' : 'Search'}
-                </button>
+                  <option value="all" className="bg-slate-800">All Content</option>
+                  <option value="photos" className="bg-slate-800">Photos Only</option>
+                  <option value="videos" className="bg-slate-800">Videos Only</option>
+                  <option value="journals" className="bg-slate-800">Journals Only</option>
+                </select>
               </div>
 
-              {/* Filters */}
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm text-gray-300">Content Type:</label>
-                  <select
-                    value={contentType}
-                    onChange={(e) => setContentType(e.target.value as 'all' | 'photos' | 'videos' | 'journals')}
-                    className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="all" className="bg-slate-800">All Content</option>
-                    <option value="photos" className="bg-slate-800">Photos Only</option>
-                    <option value="videos" className="bg-slate-800">Videos Only</option>
-                    <option value="journals" className="bg-slate-800">Journals Only</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm text-gray-300">Sort By:</label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as 'relevance' | 'date')}
-                    className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="relevance" className="bg-slate-800">Relevance</option>
-                    <option value="date" className="bg-slate-800">Date</option>
-                  </select>
-                </div>
+              <div className="flex items-center space-x-2">
+                <label className="text-sm text-gray-300">Sort By:</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'relevance' | 'date')}
+                  className="px-3 py-1 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="relevance" className="bg-slate-800">Relevance</option>
+                  <option value="date" className="bg-slate-800">Date</option>
+                </select>
               </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
 
         {/* Results */}
