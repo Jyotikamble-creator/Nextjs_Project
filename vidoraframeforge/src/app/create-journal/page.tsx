@@ -162,14 +162,34 @@ export default function CreateJournalPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 py-8">
-      <div className="max-w-4xl mx-auto px-6">
-        <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
-          <div className="flex items-center mb-8">
-            <svg className="w-8 h-8 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            <h1 className="text-3xl font-bold text-white">Write Journal Entry</h1>
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <div className="relative overflow-hidden bg-linear-to-r from-green-800/40 via-emerald-800/40 to-green-800/40 backdrop-blur-sm border-b border-white/10 mb-8">
+          {/* Decorative background elements */}
+          <div className="absolute inset-0 bg-linear-to-br from-green-400/8 via-transparent to-emerald-400/8"></div>
+          <div className="absolute top-0 left-1/4 w-64 h-64 bg-green-500/15 rounded-full blur-3xl -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-emerald-500/15 rounded-full blur-3xl translate-y-1/2"></div>
+          
+          <div className="relative max-w-4xl mx-auto py-8 px-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-green-500/25 to-emerald-500/25 rounded-2xl mb-4 backdrop-blur-sm border border-white/10 shadow-xl">
+                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-linear-to-r from-white via-green-100 to-white bg-clip-text text-transparent">
+                Write Journal Entry
+              </h1>
+              <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
+                Capture your thoughts and memories. Write your journal entries and share your story.
+              </p>
+            </div>
           </div>
+        </div>
+
+        {/* Journal Form */}
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Title */}
@@ -362,7 +382,7 @@ export default function CreateJournalPage() {
               <button
                 type="submit"
                 disabled={!formData.title.trim() || !formData.content.trim() || saving || uploadingAttachments}
-                className="px-6 py-3 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-green-500/25 order-1 sm:order-2"
+                className="px-6 py-3 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-green-500/25 order-1 sm:order-2"
               >
                 {uploadingAttachments ? 'Uploading...' : saving ? 'Saving...' : 'Save Journal Entry'}
               </button>
@@ -370,6 +390,7 @@ export default function CreateJournalPage() {
           </form>
         </div>
       </div>
+    </div>
     </div>
   )
 }

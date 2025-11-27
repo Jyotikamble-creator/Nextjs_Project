@@ -120,14 +120,34 @@ export default function UploadPhotoPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 py-8">
-      <div className="max-w-4xl mx-auto px-6">
-        <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
-          <div className="flex items-center mb-8">
-            <svg className="w-8 h-8 text-blue-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <h1 className="text-3xl font-bold text-white">Upload Photo</h1>
+      <div className="max-w-7xl mx-auto px-6">
+        {/* Header */}
+        <div className="relative overflow-hidden bg-linear-to-r from-blue-900/30 via-cyan-900/30 to-blue-900/30 backdrop-blur-sm border-b border-white/10 mb-8">
+          {/* Decorative background elements */}
+          <div className="absolute inset-0 bg-linear-to-br from-blue-500/5 via-transparent to-cyan-500/5"></div>
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl -translate-y-1/2"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-3xl translate-y-1/2"></div>
+          
+          <div className="relative max-w-4xl mx-auto py-8 px-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-600/20 to-cyan-600/20 rounded-2xl mb-4 backdrop-blur-sm border border-white/10 shadow-xl">
+                <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-3 bg-linear-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
+                Upload Photo
+              </h1>
+              <p className="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
+                Share your memories with the world. Upload your photos and connect with your audience.
+              </p>
+            </div>
           </div>
+        </div>
+
+        {/* Upload Form */}
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10">
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* File Upload */}
@@ -277,7 +297,7 @@ export default function UploadPhotoPage() {
               <button
                 type="submit"
                 disabled={!selectedFile || uploading}
-                className="px-6 py-3 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25 order-1 sm:order-2"
+                className="px-6 py-3 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25 order-1 sm:order-2"
               >
                 {uploading ? 'Uploading...' : 'Upload Photo'}
               </button>
@@ -285,6 +305,7 @@ export default function UploadPhotoPage() {
           </form>
         </div>
       </div>
+    </div>
     </div>
   )
 }
