@@ -96,7 +96,7 @@ export default function JournalCard({ journal }: JournalCardProps) {
                 </svg>
                 {journal.attachments.length} attachment{journal.attachments.length !== 1 ? 's' : ''}
               </div>
-              {journal.attachments[0]?.fileType?.startsWith('image/') && (
+              {journal.attachments[0]?.type === 'photo' && (
                 <div className="w-12 h-12 rounded overflow-hidden border border-white/20">
                   <img
                     src={journal.attachments[0].url}

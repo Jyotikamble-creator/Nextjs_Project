@@ -431,8 +431,8 @@ export default function JournalDetailPage() {
                   <h3 className="text-lg font-semibold text-white mb-4">Attachments</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {journal.attachments.map((attachment, index) => {
-                      const isImage = attachment.fileType?.startsWith('image/')
-                      const isVideo = attachment.fileType?.startsWith('video/')
+                      const isImage = attachment.type === 'photo'
+                      const isVideo = attachment.type === 'video'
 
                       return (
                         <div key={index} className="bg-white/10 rounded-lg overflow-hidden">
@@ -462,7 +462,7 @@ export default function JournalDetailPage() {
                                 </svg>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-white font-medium truncate">{attachment.fileName || `Attachment ${index + 1}`}</p>
-                                  <p className="text-gray-400 text-sm">{attachment.fileType || 'Unknown type'}</p>
+                                  <p className="text-gray-400 text-sm">{attachment.type || 'Unknown type'}</p>
                                 </div>
                               </div>
                             </div>

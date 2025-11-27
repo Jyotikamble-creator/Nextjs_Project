@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import Loader from "@/ui/Loader"
 import VideoCard from "@/components/video/VideoCard"
 import { Video } from "@/types/video/video"
+import { exportMultipleVideosToPDF, VideoExportData } from "@/lib/utils/pdfExport"
 
 export default function VideosPage() {
   const { user, isAuthenticated, loading } = useAuth()
@@ -97,6 +98,33 @@ export default function VideosPage() {
     }
   }
 
+  const handleExportAllVideos = async () => {
+    if (filteredVideos.length === 0) {
+      alert('No videos to export')
+      return
+    }
+
+    try {
+      const exportData: VideoExportData[] = filteredVideos.map(video => ({
+        title: video.title || 'Untitled Video',
+        description: video.description,
+        url: video.videoUrl || '',
+        thumbnailUrl: video.thumbnailUrl,
+        category: video.category,
+        tags: video.tags,
+        createdAt: video.createdAt,
+        fileName: video.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.mp4' || 'video.mp4',
+        size: 0, // Size not available in video interface
+        duration: 0 // Duration not available in video interface
+      }))
+
+      await exportMultipleVideosToPDF(exportData)
+    } catch (error) {
+      console.error('Failed to export videos:', error)
+      alert('Failed to export videos as PDF')
+    }
+  }
+
   if (loading) return <Loader fullscreen />
 
   if (!isAuthenticated) {
@@ -147,7 +175,7 @@ export default function VideosPage() {
       {/* Filters */}
       <div className="max-w-7xl mx-auto px-6 py-6">
         <div className="bg-white/5 backdrop-blur-lg rounded-xl p-6 border border-white/10 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             {/* Search */}
             <div>
               <label htmlFor="search" className="block text-sm font-medium text-gray-300 mb-2">
@@ -203,13 +231,29 @@ export default function VideosPage() {
             <div className="flex items-end">
               <a
                 href="/upload-video"
-                className="w-full inline-flex items-center justify-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                className="w-full inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25 text-sm"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
-                Upload Video
+                <span className="hidden sm:inline">Upload Video</span>
+                <span className="sm:hidden">Upload</span>
               </a>
+            </div>
+
+            {/* Export Button */}
+            <div className="flex items-end">
+              <button
+                onClick={handleExportAllVideos}
+                disabled={filteredVideos.length === 0}
+                className="w-full px-3 sm:px-4 py-2 bg-linear-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-pink-500/25 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center text-sm"
+              >
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="hidden sm:inline">Export All PDF</span>
+                <span className="sm:hidden">Export</span>
+              </button>
             </div>
           </div>
 

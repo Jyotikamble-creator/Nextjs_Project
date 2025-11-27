@@ -213,42 +213,46 @@ export default function Dashboard() {
               <h1 className="text-4xl font-bold text-white mb-2">My Memory Journal</h1>
               <p className="text-gray-300">Track your memories, photos, and stories</p>
             </div>
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-2 sm:gap-4">
               <button
                 onClick={handleExportDataPDF}
-                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25"
+                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-orange-500/25 text-sm"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                Export Data
+                <span className="hidden sm:inline">Export Data</span>
+                <span className="sm:hidden">Export</span>
               </button>
               <Link
                 href="/upload-video"
-                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25"
+                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-purple-500/25 text-sm"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                Upload Video
+                <span className="hidden sm:inline">Upload Video</span>
+                <span className="sm:hidden">Video</span>
               </Link>
               <Link
                 href="/upload-photo"
-                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25"
+                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/25 text-sm"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                Upload Photo
+                <span className="hidden sm:inline">Upload Photo</span>
+                <span className="sm:hidden">Photo</span>
               </Link>
               <Link
                 href="/create-journal"
-                className="inline-flex items-center px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25"
+                className="inline-flex items-center px-3 sm:px-4 py-2 bg-linear-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-green-500/25 text-sm"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Write Journal
+                <span className="hidden sm:inline">Write Journal</span>
+                <span className="sm:hidden">Journal</span>
               </Link>
             </div>
           </div>
@@ -257,40 +261,40 @@ export default function Dashboard() {
 
       {/* Navigation Tabs */}
       <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex space-x-1 bg-white/5 backdrop-blur-lg rounded-lg p-1 border border-white/10">
+        <div className="flex flex-wrap bg-white/5 backdrop-blur-lg rounded-lg p-1 border border-white/10">
           <Link
             href="/dashboard"
-            className="flex-1 text-center px-4 py-2 text-sm font-medium text-white bg-white/10 rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-white/10 rounded-md transition-colors"
           >
             Overview
           </Link>
           <Link
             href="/photos"
-            className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Photos
           </Link>
           <Link
             href="/video"
-            className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Videos
           </Link>
           <Link
             href="/journals"
-            className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Journals
           </Link>
           <Link
             href="/search"
-            className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Search
           </Link>
           <Link
             href="/settings"
-            className="flex-1 text-center px-4 py-2 text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+            className="flex-1 min-w-0 text-center px-2 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             Settings
           </Link>

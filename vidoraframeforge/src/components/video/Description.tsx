@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Video } from "@/types/video/video";
-import { formatViews, formatTimeAgo } from "@/lib/utils";
+import { formatViews } from "@/lib/utils/formatters";
+import { formatTimeAgo } from "@/lib/utils/formatTimeAgo";
 
 interface VideoDescriptionProps {
   video: Video;
