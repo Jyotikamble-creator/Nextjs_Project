@@ -44,8 +44,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (userId) {
-      query.uploader = new mongoose.Types.ObjectId(userId)
-      Logger.d(LogTags.VIDEO_FETCH, 'User-specific photo fetch', { userId });
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        query.uploader = new mongoose.Types.ObjectId(userId)
+        Logger.d(LogTags.VIDEO_FETCH, 'User-specific photo fetch', { userId });
+      } else {
+        Logger.w(LogTags.VIDEO_FETCH, 'Invalid userId format', { userId });
+        return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
+      }
     }
 
     const photos = await Photo.find(query).populate("uploader", "name avatar").sort({ createdAt: -1 }).limit(50)

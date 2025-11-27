@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
     const tag = searchParams.get("tag")
     const userId = searchParams.get("userId")
+    const limit = searchParams.get("limit")
 
-    Logger.d(LogTags.VIDEO_FETCH, 'Query parameters parsed', { hasSearch: !!search, tag, userId });
+    Logger.d(LogTags.VIDEO_FETCH, 'Query parameters parsed', { hasSearch: !!search, tag, userId, limit });
 
     const query: Record<string, unknown> = {}
 
@@ -44,14 +45,19 @@ export async function GET(request: NextRequest) {
     }
 
     if (userId) {
-      query.author = new mongoose.Types.ObjectId(userId)
-      Logger.d(LogTags.VIDEO_FETCH, 'User-specific journal fetch', { userId });
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        query.author = new mongoose.Types.ObjectId(userId)
+        Logger.d(LogTags.VIDEO_FETCH, 'User-specific journal fetch', { userId });
+      } else {
+        Logger.w(LogTags.VIDEO_FETCH, 'Invalid userId format', { userId });
+        return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
+      }
     }
 
     const journals = await Journal.find(query)
       .populate("author", "name avatar")
       .sort({ createdAt: -1 })
-      .limit(50)
+      .limit(limit ? parseInt(limit) : 50)
 
     Logger.i(LogTags.VIDEO_FETCH, `Journals fetched successfully: ${journals.length} journals returned`);
     return NextResponse.json(journals)

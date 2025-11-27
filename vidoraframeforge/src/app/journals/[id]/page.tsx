@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext"
 import { useParams, useRouter } from "next/navigation"
 import Loader from "@/ui/Loader"
 import { IJournal } from "@/server/models/Journal"
-import { exportJournalToPDF, JournalExportData } from "@/utils/pdfExport"
+import { exportJournalToPDF, JournalExportData } from "@/lib/utils/pdfExport"
 
 export default function JournalDetailPage() {
   const { user, isAuthenticated, loading } = useAuth()
@@ -126,6 +126,29 @@ export default function JournalDetailPage() {
     } catch (error) {
       console.error('Failed to export PDF:', error)
       alert('Failed to export journal as PDF')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!journal) return
+
+    if (!confirm('Are you sure you want to delete this journal? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/journals/${journal._id}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        router.push('/journals')
+      } else {
+        throw new Error('Failed to delete journal')
+      }
+    } catch (error) {
+      console.error('Failed to delete journal:', error)
+      alert('Failed to delete journal')
     }
   }
 
