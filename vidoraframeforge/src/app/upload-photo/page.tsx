@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useAuth } from "@/context/AuthContext"
 import Loader from "@/ui/Loader"
 import { useRouter } from "next/navigation"
+import axios from "axios"
 
 export default function UploadPhotoPage() {
   const { isAuthenticated, loading, user } = useAuth()
@@ -62,39 +63,38 @@ export default function UploadPhotoPage() {
     setUploading(true)
 
     try {
-      // First, upload to ImageKit
-      const imageKitFormData = new FormData()
-      imageKitFormData.append('file', selectedFile)
-      imageKitFormData.append('fileName', selectedFile.name)
-      imageKitFormData.append('folder', `/users/${user.id}/photos`)
+      // Get ImageKit auth parameters (same as video upload)
+      const { data: authData } = await axios.get("/api/auth/imagekit-auth")
 
-      const imageKitResponse = await fetch('/api/imagekit-auth', {
-        method: 'POST',
-        body: imageKitFormData
-      })
+      // Upload to ImageKit (exact same as video upload)
+      const formData = new FormData()
+      formData.append("file", selectedFile)
+      formData.append("fileName", selectedFile.name)
+      formData.append("publicKey", authData.publicKey)
+      formData.append("signature", authData.authenticationParameters.signature)
+      formData.append("expire", authData.authenticationParameters.expire)
+      formData.append("token", authData.authenticationParameters.token)
 
-      if (!imageKitResponse.ok) {
-        throw new Error('Failed to upload image')
-      }
+      const uploadResponse = await axios.post("https://upload.imagekit.io/api/v1/files/upload", formData)
 
-      const imageKitData = await imageKitResponse.json()
+      const imageKitData = uploadResponse.data
 
       // Then, save photo metadata
       const photoData = {
         title: formData.title || selectedFile.name,
         description: formData.description,
-        imageUrl: imageKitData.url,
+        photoUrl: imageKitData.url,
         thumbnailUrl: imageKitData.thumbnail || imageKitData.url,
         fileId: imageKitData.fileId,
+        fileName: selectedFile.name,
+        size: selectedFile.size,
+        width: imageKitData.width,
+        height: imageKitData.height,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         album: formData.album || undefined,
         location: formData.location || undefined,
         isPublic: formData.isPublic,
-        metadata: {
-          fileName: selectedFile.name,
-          fileSize: selectedFile.size,
-          mimeType: selectedFile.type
-        }
+        takenAt: undefined // Could be extracted from EXIF data if needed
       }
 
       const response = await fetch('/api/photos', {
@@ -112,7 +112,18 @@ export default function UploadPhotoPage() {
       }
     } catch (error) {
       console.error('Upload failed:', error)
-      alert('Upload failed. Please try again.')
+      
+      // Handle axios errors
+      let errorMessage = 'Upload failed. Please try again.'
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        errorMessage = `Upload failed: ${error.response.data.message}`
+        console.error('ImageKit error details:', error.response.data)
+      } else if (axios.isAxiosError(error)) {
+        errorMessage = `Upload failed: ${error.response?.status} ${error.response?.statusText}`
+        console.error('ImageKit error response:', error.response)
+      }
+      
+      alert(errorMessage)
     } finally {
       setUploading(false)
     }

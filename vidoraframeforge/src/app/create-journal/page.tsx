@@ -88,12 +88,28 @@ export default function CreateJournalPage() {
       // Upload attachments to ImageKit
       const uploadedAttachments = []
       for (const file of attachments) {
+        // First get authentication parameters from our API
+        const authResponse = await fetch('/api/auth/imagekit-auth', {
+          method: 'GET'
+        })
+
+        if (!authResponse.ok) {
+          throw new Error('Failed to get upload authentication')
+        }
+
+        const authData = await authResponse.json()
+
+        // Now upload directly to ImageKit with the auth parameters
         const formDataUpload = new FormData()
         formDataUpload.append('file', file)
         formDataUpload.append('fileName', file.name)
         formDataUpload.append('folder', `/users/${user?.id}/journals`)
+        formDataUpload.append('publicKey', authData.publicKey)
+        formDataUpload.append('signature', authData.signature)
+        formDataUpload.append('expire', authData.expire)
+        formDataUpload.append('token', authData.token)
 
-        const uploadResponse = await fetch('/api/imagekit-auth', {
+        const uploadResponse = await fetch('https://upload.imagekit.io/api/v1/files/upload', {
           method: 'POST',
           body: formDataUpload
         })
