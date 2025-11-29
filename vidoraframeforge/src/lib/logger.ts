@@ -8,7 +8,7 @@ interface LogContext {
 export const LogTags = {
   // Auth operations
   LOGIN: 'LOGIN',
-  REGISTER: 'REGISTER',
+  SIGNUP: 'SIGNUP',
   LOGOUT: 'LOGOUT',
   AUTH: 'AUTH',
   AUTH_MIDDLEWARE: 'AUTH_MIDDLEWARE',
@@ -318,9 +318,9 @@ export class Logger {
     loginAttempt: (email: string) => this.info(LogTags.LOGIN, 'Login attempt', { email: this.maskEmail(email) }),
     loginSuccess: (userId: string) => this.info(LogTags.LOGIN, 'Login successful', { userId }),
     loginFailed: (email: string, reason: string) => this.warn(LogTags.LOGIN, 'Login failed', { email: this.maskEmail(email), reason }),
-    registerAttempt: (email: string) => this.info(LogTags.REGISTER, 'Registration attempt', { email: this.maskEmail(email) }),
-    registerSuccess: (userId: string) => this.info(LogTags.REGISTER, 'Registration successful', { userId }),
-    registerFailed: (email: string, reason: string) => this.warn(LogTags.REGISTER, 'Registration failed', { email: this.maskEmail(email), reason }),
+    registerAttempt: (email: string) => this.info(LogTags.SIGNUP, 'Registration attempt', { email: this.maskEmail(email) }),
+    registerSuccess: (userId: string) => this.info(LogTags.SIGNUP, 'Registration successful', { userId }),
+    registerFailed: (email: string, reason: string) => this.warn(LogTags.SIGNUP, 'Registration failed', { email: this.maskEmail(email), reason }),
   };
 
   // Video-specific logging methods

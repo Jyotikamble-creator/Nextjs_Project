@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     // Validate email format
     if (!isValidEmail(email)) {
-      Logger.w(LogTags.REGISTER, 'Registration failed: invalid email format', { email: Logger.maskEmail(email) });
+      Logger.w(LogTags.SIGNUP, 'Registration failed: invalid email format', { email: Logger.maskEmail(email) });
       return NextResponse.json(
         { error: 'Invalid email format' },
         { status: 400 }
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Validate password strength
     if (!isValidPassword(password)) {
-      Logger.w(LogTags.REGISTER, 'Registration failed: password too weak');
+      Logger.w(LogTags.SIGNUP, 'Registration failed: password too weak');
       return NextResponse.json(
         { error: 'Password must be at least 6 characters long' },
         { status: 400 }
@@ -46,11 +46,11 @@ export async function POST(request: NextRequest) {
     const sanitizedEmail = email.toLowerCase().trim();
     const sanitizedName = name ? sanitizeString(name) : sanitizedEmail.split('@')[0];
 
-    Logger.d(LogTags.REGISTER, 'Input validation passed', { email: Logger.maskEmail(sanitizedEmail) });
+    Logger.d(LogTags.SIGNUP, 'Input validation passed', { email: Logger.maskEmail(sanitizedEmail) });
 
     // Hash the password before database operations
     const hashedPassword = await bcrypt.hash(password, 12)
-    Logger.d(LogTags.REGISTER, 'Password hashed successfully');
+    Logger.d(LogTags.SIGNUP, 'Password hashed successfully');
 
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for registration');
@@ -59,18 +59,18 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       // Check if existing user has a password
       if (existingUser.password) {
-        Logger.w(LogTags.REGISTER, 'Registration failed: user already exists', { email: Logger.maskEmail(sanitizedEmail) });
+        Logger.w(LogTags.SIGNUP, 'Registration failed: user already exists', { email: Logger.maskEmail(sanitizedEmail) });
         return NextResponse.json({ error: "User already registered" }, { status: 409 })
       } else {
         // User exists but has no password - update the existing record
-        Logger.i(LogTags.REGISTER, 'Updating incomplete user record', { userId: existingUser._id.toString() });
+        Logger.i(LogTags.SIGNUP, 'Updating incomplete user record', { userId: existingUser._id.toString() });
         
         try {
           existingUser.password = hashedPassword;
           existingUser.name = sanitizedName;
           await existingUser.save();
           
-          Logger.i(LogTags.REGISTER, 'Incomplete user record updated successfully', { userId: existingUser._id.toString(), email: Logger.maskEmail(sanitizedEmail) });
+          Logger.i(LogTags.SIGNUP, 'Incomplete user record updated successfully', { userId: existingUser._id.toString(), email: Logger.maskEmail(sanitizedEmail) });
           
           return NextResponse.json(
             {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
             { status: 201 },
           )
         } catch (saveError) {
-          Logger.e(LogTags.REGISTER, 'Failed to update incomplete user record', { error: saveError, userId: existingUser._id.toString() });
+          Logger.e(LogTags.SIGNUP, 'Failed to update incomplete user record', { error: saveError, userId: existingUser._id.toString() });
           throw saveError; // Re-throw to be caught by outer catch
         }
       }
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       password: hashedPassword,
     })
 
-    Logger.i(LogTags.REGISTER, 'User registered successfully', { userId: newUser._id.toString(), email: Logger.maskEmail(sanitizedEmail) });
+    Logger.i(LogTags.SIGNUP, 'User registered successfully', { userId: newUser._id.toString(), email: Logger.maskEmail(sanitizedEmail) });
 
     // Return a success response with the user ID and email
     return NextResponse.json(
@@ -104,12 +104,12 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     )
   } catch (error) {
-    Logger.e(LogTags.REGISTER, 'Registration error details', { error: error });
+    Logger.e(LogTags.SIGNUP, 'Registration error details', { error: error });
     const categorizedError = categorizeError(error);
-    Logger.d(LogTags.REGISTER, 'Categorized error type', { type: categorizedError.constructor.name, message: categorizedError.message });
+    Logger.d(LogTags.SIGNUP, 'Categorized error type', { type: categorizedError.constructor.name, message: categorizedError.message });
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.REGISTER, `Validation error in registration: ${categorizedError.message}`);
+      Logger.e(LogTags.SIGNUP, `Validation error in registration: ${categorizedError.message}`);
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.REGISTER, `Unexpected error in registration: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.SIGNUP, `Unexpected error in registration: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Registration failed" }, { status: 500 });
   }
 }
