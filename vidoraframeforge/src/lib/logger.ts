@@ -164,8 +164,18 @@ export function categorizeError(error: unknown): Error {
       return new ValidationError(`Validation error: ${error.message}`);
     }
 
-    if (error.name === 'CastError' || error.name === 'MongoError' || error.name === 'MongoServerError') {
+    if (error.name === 'CastError' || error.name === 'MongoError' || error.name === 'MongoServerError' || error.name === 'MongoNetworkError') {
       return new DatabaseError(`Database error: ${error.message}`);
+    }
+
+    // Mongoose duplicate key error
+    if (error.name === 'MongoServerError' && (error as any).code === 11000) {
+      return new DatabaseError(`Duplicate key error: ${error.message}`);
+    }
+
+    // Mongoose connection errors
+    if (error.name === 'MongooseError' && error.message.includes('buffering timed out')) {
+      return new ConnectionError('Database connection timeout');
     }
 
     // Database errors

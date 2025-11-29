@@ -3,7 +3,7 @@
 
 import { useState } from "react"
 import axios from "axios"
-import { Logger, LogTags, categorizeError } from "@/lib/logger"
+import { logger, LogTags, categorizeError } from "@/lib/logger"
 import { uploadToImageKit } from "@/lib/utils/imagekitUpload"
 
 interface UploadMetadata {
@@ -21,34 +21,34 @@ export function useUpload() {
     setError(null)
     setProgress(0)
 
-    Logger.video.uploadStart('anonymous', file.name);
+    logger.video.uploadStart('anonymous', file.name);
 
     try {
       // Upload to ImageKit
-      Logger.d(LogTags.IMAGEKIT_UPLOAD, 'Starting ImageKit upload', { fileName: file.name, fileSize: file.size });
+      logger.debug(LogTags.IMAGEKIT_UPLOAD, 'Starting ImageKit upload', { fileName: file.name, fileSize: file.size });
 
       const uploadResult = await uploadToImageKit(file);
 
-      Logger.i(LogTags.IMAGEKIT_UPLOAD, 'ImageKit upload successful', {
+      logger.info(LogTags.IMAGEKIT_UPLOAD, 'ImageKit upload successful', {
         fileId: uploadResult.fileId,
         url: uploadResult.url
       });
 
       // Save video metadata to database
-      Logger.d(LogTags.VIDEO_UPLOAD, 'Saving video metadata to database', { title: metadata.title });
+      logger.debug(LogTags.VIDEO_UPLOAD, 'Saving video metadata to database', { title: metadata.title });
       await axios.post("/api/auth/videos", {
         title: metadata.title,
         description: metadata.description,
         videoUrl: uploadResult.url,
         thumbnailUrl: uploadResult.thumbnailUrl || uploadResult.url,
-      })
+      }, { withCredentials: true })
 
       setProgress(100)
-      Logger.video.uploadSuccess('anonymous', 'pending');
+      logger.video.uploadSuccess('anonymous', 'pending');
       return uploadResult.url
     } catch (err: unknown) {
       const categorizedError = categorizeError(err);
-      Logger.e(LogTags.VIDEO_UPLOAD, `Upload failed: ${categorizedError.message}`, categorizedError);
+      logger.error(LogTags.VIDEO_UPLOAD, `Upload failed: ${categorizedError.message}`, categorizedError);
 
       let errorMessage = "Upload failed"
       if (axios.isAxiosError(err) && err.response?.data?.error) {

@@ -47,6 +47,8 @@ export default function FileUpload() {
         tags: "",
         isPublic: true
       })
+      // Navigate to dashboard to see the uploaded video
+      router.push('/dashboard')
     } catch (error) {
       console.error("Upload failed:", error)
     }

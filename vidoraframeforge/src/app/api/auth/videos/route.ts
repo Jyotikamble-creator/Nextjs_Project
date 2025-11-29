@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { connectionToDatabase } from "@/server/db"
 import Video from "@/server/models/Video"
+import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/lib/validation"
@@ -81,6 +82,12 @@ export async function POST(request: NextRequest) {
 
     Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
 
+    // Validate user ID format
+    if (!mongoose.Types.ObjectId.isValid(session.user.id)) {
+      Logger.w(LogTags.VIDEO_UPLOAD, 'Video creation failed: invalid user ID format', { userId: session.user.id });
+      return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
+    }
+
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for video creation');
 
@@ -124,30 +131,47 @@ export async function POST(request: NextRequest) {
 
     Logger.d(LogTags.VIDEO_UPLOAD, 'Input validation passed', { title: sanitizedTitle });
 
-    const video = await Video.create({
-      title: sanitizedTitle,
-      description: sanitizedDescription,
-      videoUrl,
-      thumbnailUrl,
-      uploader: session.user.id,
-      category: sanitizedCategory,
-      tags: tags || [],
-      isPublic: isPublic !== false,
-      fileId,
-      duration: duration || 0,
-      size: size || 0,
-    })
+    try {
+      const video = await Video.create({
+        title: sanitizedTitle,
+        description: sanitizedDescription,
+        videoUrl,
+        thumbnailUrl,
+        uploader: session.user.id,
+        category: sanitizedCategory,
+        tags: tags || [],
+        isPublic: isPublic !== false,
+        fileId,
+        duration: duration || 0,
+        size: size || 0,
+      })
+      Logger.d(LogTags.VIDEO_UPLOAD, 'Video created in database', { videoId: video._id.toString() });
 
-    const populatedVideo = await Video.findById(video._id).populate("uploader", "name avatar")
+      const populatedVideo = await Video.findById(video._id).populate("uploader", "name avatar")
+      Logger.d(LogTags.VIDEO_UPLOAD, 'Video populated with uploader data', { videoId: video._id.toString() });
 
-    Logger.i(LogTags.VIDEO_UPLOAD, 'Video created successfully', {
-      videoId: video._id.toString(),
-      userId: session.user.id,
-      title: sanitizedTitle
-    });
+      // Update user stats
+      const userUpdateResult = await User.findByIdAndUpdate(session.user.id, {
+        $inc: { 'stats.totalVideos': 1 },
+        $set: { 'stats.lastActive': new Date() }
+      });
+      Logger.d(LogTags.VIDEO_UPLOAD, 'User stats updated', { userId: session.user.id, updateResult: !!userUpdateResult });
 
-    return NextResponse.json(populatedVideo, { status: 201 })
+      Logger.i(LogTags.VIDEO_UPLOAD, 'Video created successfully', {
+        videoId: video._id.toString(),
+        userId: session.user.id,
+        title: sanitizedTitle
+      });
+
+      return NextResponse.json(populatedVideo, { status: 201 })
+    } catch (dbError) {
+      Logger.e(LogTags.DB_ERROR, 'Database operation failed', { error: dbError });
+      throw dbError; // Re-throw to be caught by outer catch
+    }
   } catch (error) {
+    // Log the raw error for debugging
+    Logger.e(LogTags.VIDEO_UPLOAD, 'Raw error in video creation', { error });
+
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {

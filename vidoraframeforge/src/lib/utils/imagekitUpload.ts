@@ -3,7 +3,24 @@ import axios from "axios";
 export async function uploadToImageKit(file: File) {
   console.log("File:", file, "size:", file.size, "type:", file.type);
 
-  // TEMPORARY: Create thumbnail data URL for testing
+  // Handle video files differently - no thumbnail generation needed for mock
+  console.log("Checking file type:", file.type, "starts with video:", file.type.startsWith('video/'));
+  if (file.type.startsWith('video/')) {
+    const mockResponse = {
+      fileId: `mock-video-${Date.now()}`,
+      name: file.name,
+      url: `mock-video-url-${Date.now()}`, // Mock video URL
+      thumbnailUrl: `mock-thumbnail-${Date.now()}`, // Mock thumbnail URL
+      width: 1920, // Mock dimensions
+      height: 1080,
+      size: file.size,
+      fileType: 'video'
+    };
+    console.log("Mock video upload successful", mockResponse);
+    return Promise.resolve(mockResponse);
+  }
+
+  // TEMPORARY: Create thumbnail data URL for testing (images only)
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () => {

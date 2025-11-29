@@ -53,7 +53,9 @@ export default function Dashboard() {
   const fetchUserVideos = async () => {
     try {
       setVideosLoading(true)
-      const response = await fetch(`/api/auth/videos?userId=${user?.id}`)
+      const response = await fetch(`/api/auth/videos?userId=${user?.id}`, {
+        cache: 'no-store'
+      })
       if (response.ok) {
         const data = await response.json()
         setVideos(data)
@@ -71,7 +73,9 @@ export default function Dashboard() {
 
   const fetchUserStats = async () => {
     try {
-      const response = await fetch(`/api/auth/user-stats?userId=${user?.id}`)
+      const response = await fetch(`/api/auth/user-stats?userId=${user?.id}`, {
+        cache: 'no-store'
+      })
       if (response.ok) {
         const data = await response.json()
         setStats(data.stats)
@@ -87,15 +91,21 @@ export default function Dashboard() {
     try {
       setActivityLoading(true)
       // Fetch recent photos
-      const photosResponse = await fetch(`/api/photos?userId=${user?.id}&limit=5`)
+      const photosResponse = await fetch(`/api/photos?userId=${user?.id}&limit=5`, {
+        cache: 'no-store'
+      })
       const photosData = photosResponse.ok ? await photosResponse.json() : []
 
       // Fetch recent journals
-      const journalsResponse = await fetch(`/api/journals?userId=${user?.id}&limit=5`)
+      const journalsResponse = await fetch(`/api/journals?userId=${user?.id}&limit=5`, {
+        cache: 'no-store'
+      })
       const journalsData = journalsResponse.ok ? await journalsResponse.json() : []
 
       // Fetch recent videos
-      const videosResponse = await fetch(`/api/auth/videos?userId=${user?.id}`)
+      const videosResponse = await fetch(`/api/auth/videos?userId=${user?.id}`, {
+        cache: 'no-store'
+      })
       const videosData = videosResponse.ok ? await videosResponse.json() : []
 
       // Combine and sort by date
