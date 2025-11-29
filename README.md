@@ -154,6 +154,40 @@ CORS_ORIGIN=http://localhost:3000
 
 ## Project Overview
 
+<img width="1920" height="900" alt="home" src="https://github.com/user-attachments/assets/d4bfe8f4-5595-482c-828c-b9ba0f5322bd" />
+
+<img width="1920" height="900" alt="auth" src="https://github.com/user-attachments/assets/f73e58d9-d9e1-48eb-9793-aa35d662b45e" />
+
+<img width="1920" height="900" alt="dashboard" src="https://github.com/user-attachments/assets/cf4f427d-f504-43fd-a10a-b1c1406a0374" />
+
+<img width="1920" height="900" alt="video" src="https://github.com/user-attachments/assets/c64985de-7fca-4bb7-8942-a141e9fdb331" />
+
+<img width="1920" height="900" alt="photo" src="https://github.com/user-attachments/assets/42644013-8193-42e0-aea6-1c4563e6b1fe" />
+
+<img width="1920" height="900" alt="journal" src="https://github.com/user-attachments/assets/0ba932d9-45e5-45c5-839a-c3e1ea1e006b" />
+
+<img width="1920" height="900" alt="Search" src="https://github.com/user-attachments/assets/0e693af0-0780-4eb2-9916-28f073bfb226" />
+
+<img width="1920" height="900" alt="profile" src="https://github.com/user-attachments/assets/40830e79-d2e2-40f7-8639-78b7903dcb94" />
+
+<img width="1920" height="900" alt="video" src="https://github.com/user-attachments/assets/fd7d183d-f820-4922-9f90-ebf1a9f046f4" />
+
+<img width="1920" height="900" alt="photo" src="https://github.com/user-attachments/assets/afd2bb2d-3cf3-474f-b9fb-151aff9f2b35" />
+
+<img width="1920" height="900" alt="journal" src="https://github.com/user-attachments/assets/7bbf67c3-ef86-43a6-be61-ac1184f63c14" />
+
+<img width="1920" height="900" alt="realdash" src="https://github.com/user-attachments/assets/88ad7824-5ed0-47ed-98e5-82729ec514f3" />
+
+<img width="1920" height="900" alt="realphoto" src="https://github.com/user-attachments/assets/71f44014-99e3-44f9-bd3b-a276a30ba3cf" />
+
+<img width="1920" height="900" alt="realvideo" src="https://github.com/user-attachments/assets/235eabb4-bc98-45f9-99ed-1aabc11daf98" />
+
+<img width="1920" height="900" alt="realjournal" src="https://github.com/user-attachments/assets/5e46bb33-2008-4d26-af40-e7956016c2ff" />
+
+<img width="1920" height="900" alt="realsearch" src="https://github.com/user-attachments/assets/1e7188b7-27dc-453d-9ff1-0f2b851b70f8" />
+
+<img width="1920" height="900" alt="recent" src="https://github.com/user-attachments/assets/9889cc0e-b9b4-4064-aacd-956fd41bd216" />
+
 ------
 ## 🌐 Live Demo
 
