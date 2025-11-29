@@ -45,16 +45,18 @@ export async function GET(request: NextRequest) {
     if (userId) {
       if (mongoose.Types.ObjectId.isValid(userId)) {
         query.uploader = new mongoose.Types.ObjectId(userId)
-        Logger.d(LogTags.VIDEO_FETCH, 'User-specific video fetch', { userId });
+        Logger.d(LogTags.VIDEO_FETCH, 'User-specific video fetch', { userId, query });
       } else {
         Logger.w(LogTags.VIDEO_FETCH, 'Invalid userId format', { userId });
         return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
       }
     }
 
+    Logger.d(LogTags.VIDEO_FETCH, 'Final query:', query);
     const videos = await Video.find(query).populate("uploader", "name avatar").sort({ createdAt: -1 }).limit(50)
 
     Logger.i(LogTags.VIDEO_FETCH, `Videos fetched successfully: ${videos.length} videos returned`);
+    console.log('Videos returned:', videos.map(v => ({ id: v._id, title: v.title, uploader: v.uploader })));
     return NextResponse.json(videos)
   } catch (error) {
     const categorizedError = categorizeError(error);
@@ -146,6 +148,7 @@ export async function POST(request: NextRequest) {
         size: size || 0,
       })
       Logger.d(LogTags.VIDEO_UPLOAD, 'Video created in database', { videoId: video._id.toString() });
+      console.log('Video created:', { id: video._id, title: video.title, uploader: video.uploader });
 
       const populatedVideo = await Video.findById(video._id).populate("uploader", "name avatar")
       Logger.d(LogTags.VIDEO_UPLOAD, 'Video populated with uploader data', { videoId: video._id.toString() });
@@ -166,6 +169,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(populatedVideo, { status: 201 })
     } catch (dbError) {
       Logger.e(LogTags.DB_ERROR, 'Database operation failed', { error: dbError });
+      console.error('Video creation error:', dbError);
       throw dbError; // Re-throw to be caught by outer catch
     }
   } catch (error) {

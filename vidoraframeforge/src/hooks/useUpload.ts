@@ -9,6 +9,9 @@ import { uploadToImageKit } from "@/lib/utils/imagekitUpload"
 interface UploadMetadata {
   title: string
   description: string
+  category?: string
+  tags?: string
+  isPublic?: boolean
 }
 
 export function useUpload() {
@@ -41,6 +44,9 @@ export function useUpload() {
         description: metadata.description,
         videoUrl: uploadResult.url,
         thumbnailUrl: uploadResult.thumbnailUrl || uploadResult.url,
+        category: metadata.category || undefined,
+        tags: metadata.tags ? metadata.tags.split(",").map(tag => tag.trim()) : [],
+        isPublic: metadata.isPublic !== false,
       }, { withCredentials: true })
 
       setProgress(100)

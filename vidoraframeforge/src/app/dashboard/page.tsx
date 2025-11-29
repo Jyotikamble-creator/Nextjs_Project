@@ -36,6 +36,7 @@ export default function Dashboard() {
   const [videosLoading, setVideosLoading] = useState(true)
   const [statsLoading, setStatsLoading] = useState(true)
   const [activityLoading, setActivityLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     if (isAuthenticated && user?.id) {
@@ -48,19 +49,23 @@ export default function Dashboard() {
       // Fetch recent activity
       fetchRecentActivity()
     }
-  }, [isAuthenticated, user?.id]) // More specific dependency
+  }, [isAuthenticated, user?.id, refreshKey]) // Added refreshKey dependency
 
   const fetchUserVideos = async () => {
     try {
       setVideosLoading(true)
+      console.log('Fetching videos for user:', user?.id)
       const response = await fetch(`/api/auth/videos?userId=${user?.id}`, {
         cache: 'no-store'
       })
+      console.log('Videos response status:', response.status)
       if (response.ok) {
         const data = await response.json()
+        console.log('Videos data:', data)
         setVideos(data)
       } else {
-        console.error("Failed to fetch videos")
+        const errorData = await response.json()
+        console.error("Failed to fetch videos:", errorData)
         setVideos([])
       }
     } catch (error) {
