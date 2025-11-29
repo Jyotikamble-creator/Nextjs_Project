@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import Loader from "@/ui/Loader"
 import { useRouter } from "next/navigation"
 import axios from "axios"
+import { uploadToImageKit } from "@/utils/imagekitUpload"
 
 export default function UploadPhotoPage() {
   const { isAuthenticated, loading, user } = useAuth()
@@ -63,33 +64,20 @@ export default function UploadPhotoPage() {
     setUploading(true)
 
     try {
-      // Get ImageKit auth parameters (same as video upload)
-      const { data: authData } = await axios.get("/api/auth/imagekit-auth")
-
-      // Upload to ImageKit (exact same as video upload)
-      const formData = new FormData()
-      formData.append("file", selectedFile)
-      formData.append("fileName", selectedFile.name)
-      formData.append("publicKey", authData.publicKey)
-      formData.append("signature", authData.authenticationParameters.signature)
-      formData.append("expire", authData.authenticationParameters.expire)
-      formData.append("token", authData.authenticationParameters.token)
-
-      const uploadResponse = await axios.post("https://upload.imagekit.io/api/v1/files/upload", formData)
-
-      const imageKitData = uploadResponse.data
+      // Upload to ImageKit
+      const uploadResult = await uploadToImageKit(selectedFile)
 
       // Then, save photo metadata
       const photoData = {
         title: formData.title || selectedFile.name,
         description: formData.description,
-        photoUrl: imageKitData.url,
-        thumbnailUrl: imageKitData.thumbnail || imageKitData.url,
-        fileId: imageKitData.fileId,
+        photoUrl: uploadResult.url,
+        thumbnailUrl: uploadResult.thumbnail || uploadResult.url,
+        fileId: uploadResult.fileId,
         fileName: selectedFile.name,
         size: selectedFile.size,
-        width: imageKitData.width,
-        height: imageKitData.height,
+        width: uploadResult.width,
+        height: uploadResult.height,
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
         album: formData.album || undefined,
         location: formData.location || undefined,
