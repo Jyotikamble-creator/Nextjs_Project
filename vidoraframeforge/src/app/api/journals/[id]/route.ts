@@ -7,7 +7,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  Logger.d(LogTags.VIDEO_FETCH, 'Individual journal fetch request received', { journalId: params.id });
+  Logger.d(LogTags.JOURNAL_FETCH, 'Individual journal fetch request received', { journalId: params.id });
 
   try {
     await connectionToDatabase()
@@ -16,11 +16,11 @@ export async function GET(
     const journal = await Journal.findById(params.id).populate("author", "name avatar")
 
     if (!journal) {
-      Logger.w(LogTags.VIDEO_FETCH, 'Journal not found', { journalId: params.id });
+      Logger.w(LogTags.JOURNAL_FETCH, 'Journal not found', { journalId: params.id });
       return NextResponse.json({ error: "Journal not found" }, { status: 404 })
     }
 
-    Logger.i(LogTags.VIDEO_FETCH, 'Journal fetched successfully', {
+    Logger.i(LogTags.JOURNAL_FETCH, 'Journal fetched successfully', {
       journalId: params.id,
       title: journal.title
     });
@@ -34,7 +34,7 @@ export async function GET(
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in individual journal fetch: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.JOURNAL_FETCH, `Unexpected error in individual journal fetch: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to fetch journal" }, { status: 500 })
   }
 }

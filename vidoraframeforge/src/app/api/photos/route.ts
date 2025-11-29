@@ -9,7 +9,7 @@ import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/li
 import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_FETCH, 'Photo fetch request received');
+  Logger.d(LogTags.PHOTO_FETCH, 'Photo fetch request received');
 
   try {
     await connectionToDatabase()
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search")
     const userId = searchParams.get("userId")
 
-    Logger.d(LogTags.VIDEO_FETCH, 'Query parameters parsed', { album, hasSearch: !!search, userId });
+    Logger.d(LogTags.PHOTO_FETCH, 'Query parameters parsed', { album, hasSearch: !!search, userId });
 
     const query: Record<string, unknown> = {}
 
@@ -40,22 +40,22 @@ export async function GET(request: NextRequest) {
         { description: { $regex: sanitizedSearch, $options: "i" } },
         { tags: { $in: [new RegExp(sanitizedSearch, "i")] } }
       ]
-      Logger.d(LogTags.VIDEO_FETCH, 'Search query applied', { searchTerm: sanitizedSearch });
+      Logger.d(LogTags.PHOTO_FETCH, 'Search query applied', { searchTerm: sanitizedSearch });
     }
 
     if (userId) {
       if (mongoose.Types.ObjectId.isValid(userId)) {
         query.uploader = new mongoose.Types.ObjectId(userId)
-        Logger.d(LogTags.VIDEO_FETCH, 'User-specific photo fetch', { userId });
+        Logger.d(LogTags.PHOTO_FETCH, 'User-specific photo fetch', { userId });
       } else {
-        Logger.w(LogTags.VIDEO_FETCH, 'Invalid userId format', { userId });
+        Logger.w(LogTags.PHOTO_FETCH, 'Invalid userId format', { userId });
         return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
       }
     }
 
     const photos = await Photo.find(query).populate("uploader", "name avatar").sort({ createdAt: -1 }).limit(50)
 
-    Logger.i(LogTags.VIDEO_FETCH, `Photos fetched successfully: ${photos.length} photos returned`);
+    Logger.i(LogTags.PHOTO_FETCH, `Photos fetched successfully: ${photos.length} photos returned`);
     return NextResponse.json(photos)
   } catch (error) {
     const categorizedError = categorizeError(error);
@@ -65,23 +65,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in photo fetch: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.PHOTO_FETCH, `Unexpected error in photo fetch: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to fetch photos" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_UPLOAD, 'Photo creation request received');
+  Logger.d(LogTags.PHOTO_UPLOAD, 'Photo creation request received');
 
   try {
     const session = await getServerSession(authOptions)
 
     if (!session) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo creation failed: unauthorized access attempt');
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo creation failed: unauthorized access attempt');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+    Logger.d(LogTags.PHOTO_UPLOAD, 'User authenticated', { userId: session.user.id });
 
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo creation');
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, description, photoUrl, thumbnailUrl, album, tags, isPublic, fileId, fileName, size, width, height, location, takenAt } = body
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Request body parsed', {
+    Logger.d(LogTags.PHOTO_UPLOAD, 'Request body parsed', {
       hasTitle: !!title,
       hasPhotoUrl: !!photoUrl,
       hasThumbnailUrl: !!thumbnailUrl,
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!photoUrl || !thumbnailUrl) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo creation failed: missing required fields', {
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo creation failed: missing required fields', {
         hasPhotoUrl: !!photoUrl,
         hasThumbnailUrl: !!thumbnailUrl
       });
@@ -108,13 +108,13 @@ export async function POST(request: NextRequest) {
 
     // Validate title if provided
     if (title && !isValidVideoTitle(title)) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo creation failed: invalid title', { title });
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo creation failed: invalid title', { title });
       return NextResponse.json({ error: "Title must be between 1 and 100 characters" }, { status: 400 })
     }
 
     // Validate description if provided
     if (description && !isValidVideoDescription(description)) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo creation failed: invalid description length');
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo creation failed: invalid description length');
       return NextResponse.json({ error: "Description must be less than 1000 characters" }, { status: 400 })
     }
 
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
     const sanitizedAlbum = album ? sanitizeString(album) : undefined;
     const sanitizedLocation = location ? sanitizeString(location) : undefined;
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Input validation passed', { title: sanitizedTitle });
+    Logger.d(LogTags.PHOTO_UPLOAD, 'Input validation passed', { title: sanitizedTitle });
 
     const photo = await Photo.create({
       title: sanitizedTitle,
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     const populatedPhoto = await Photo.findById(photo._id).populate("uploader", "name avatar")
 
-    Logger.i(LogTags.VIDEO_UPLOAD, 'Photo created successfully', {
+    Logger.i(LogTags.PHOTO_UPLOAD, 'Photo created successfully', {
       photoId: photo._id.toString(),
       userId: session.user.id,
       title: sanitizedTitle
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in photo creation: ${categorizedError.message}`, { error: categorizedError });
+      Logger.e(LogTags.PHOTO_UPLOAD, `Validation error in photo creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
@@ -172,23 +172,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo creation: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.PHOTO_UPLOAD, `Unexpected error in photo creation: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to create photo" }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_UPLOAD, 'Photo update request received');
+  Logger.d(LogTags.PHOTO_UPLOAD, 'Photo update request received');
 
   try {
     const session = await getServerSession(authOptions)
 
     if (!session) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: unauthorized access attempt');
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: unauthorized access attempt');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+    Logger.d(LogTags.PHOTO_UPLOAD, 'User authenticated', { userId: session.user.id });
 
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo update');
@@ -197,14 +197,14 @@ export async function PUT(request: NextRequest) {
     const photoId = searchParams.get("id")
 
     if (!photoId) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: missing photo ID');
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: missing photo ID');
       return NextResponse.json({ error: "Photo ID is required" }, { status: 400 })
     }
 
     const body = await request.json()
     const { title, description, tags, album, location, isPublic } = body
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Update request body parsed', {
+    Logger.d(LogTags.PHOTO_UPLOAD, 'Update request body parsed', {
       photoId,
       hasTitle: !!title,
       hasDescription: !!description,
@@ -214,12 +214,12 @@ export async function PUT(request: NextRequest) {
     // Find the photo and check ownership
     const existingPhoto = await Photo.findById(photoId)
     if (!existingPhoto) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: photo not found', { photoId });
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: photo not found', { photoId });
       return NextResponse.json({ error: "Photo not found" }, { status: 404 })
     }
 
     if (existingPhoto.uploader.toString() !== session.user.id) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: unauthorized access', {
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: unauthorized access', {
         photoId,
         userId: session.user.id,
         uploaderId: existingPhoto.uploader.toString()
@@ -229,7 +229,7 @@ export async function PUT(request: NextRequest) {
 
     // Validate title if provided
     if (title && !isValidVideoTitle(title)) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo update failed: invalid title', { title });
+      Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: invalid title', { title });
       return NextResponse.json({ error: "Title must be between 1 and 100 characters" }, { status: 400 })
     }
 
@@ -244,7 +244,7 @@ export async function PUT(request: NextRequest) {
 
     updateData.updatedAt = new Date();
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Update data prepared', { photoId });
+    Logger.d(LogTags.PHOTO_UPLOAD, 'Update data prepared', { photoId });
 
     const updatedPhoto = await Photo.findByIdAndUpdate(
       photoId,
@@ -252,7 +252,7 @@ export async function PUT(request: NextRequest) {
       { new: true }
     ).populate("uploader", "name avatar")
 
-    Logger.i(LogTags.VIDEO_UPLOAD, 'Photo updated successfully', {
+    Logger.i(LogTags.PHOTO_UPLOAD, 'Photo updated successfully', {
       photoId,
       userId: session.user.id,
       title: updatedPhoto?.title
@@ -263,7 +263,7 @@ export async function PUT(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in photo update: ${categorizedError.message}`, { error: categorizedError });
+      Logger.e(LogTags.PHOTO_UPLOAD, `Validation error in photo update: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
@@ -272,23 +272,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo update: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.PHOTO_UPLOAD, `Unexpected error in photo update: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to update photo" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_UPLOAD, 'Photo deletion request received');
+  Logger.d(LogTags.PHOTO_DELETE, 'Photo deletion request received');
 
   try {
     const session = await getServerSession(authOptions)
 
     if (!session) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: unauthorized access attempt');
+      Logger.w(LogTags.PHOTO_DELETE, 'Photo deletion failed: unauthorized access attempt');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+    Logger.d(LogTags.PHOTO_DELETE, 'User authenticated', { userId: session.user.id });
 
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo deletion');
@@ -297,21 +297,21 @@ export async function DELETE(request: NextRequest) {
     const photoId = searchParams.get("id")
 
     if (!photoId) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: missing photo ID');
+      Logger.w(LogTags.PHOTO_DELETE, 'Photo deletion failed: missing photo ID');
       return NextResponse.json({ error: "Photo ID is required" }, { status: 400 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Deletion request parsed', { photoId });
+    Logger.d(LogTags.PHOTO_DELETE, 'Deletion request parsed', { photoId });
 
     // Find the photo and check ownership
     const existingPhoto = await Photo.findById(photoId)
     if (!existingPhoto) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: photo not found', { photoId });
+      Logger.w(LogTags.PHOTO_DELETE, 'Photo deletion failed: photo not found', { photoId });
       return NextResponse.json({ error: "Photo not found" }, { status: 404 })
     }
 
     if (existingPhoto.uploader.toString() !== session.user.id) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Photo deletion failed: unauthorized access', {
+      Logger.w(LogTags.PHOTO_DELETE, 'Photo deletion failed: unauthorized access', {
         photoId,
         userId: session.user.id,
         uploaderId: existingPhoto.uploader.toString()
@@ -327,7 +327,7 @@ export async function DELETE(request: NextRequest) {
       $set: { 'stats.lastActive': new Date() }
     });
 
-    Logger.i(LogTags.VIDEO_UPLOAD, 'Photo deleted successfully', {
+    Logger.i(LogTags.PHOTO_DELETE, 'Photo deleted successfully', {
       photoId,
       userId: session.user.id,
       title: existingPhoto.title
@@ -342,7 +342,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in photo deletion: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.PHOTO_DELETE, `Unexpected error in photo deletion: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to delete photo" }, { status: 500 })
   }
 }

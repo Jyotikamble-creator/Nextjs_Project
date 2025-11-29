@@ -9,7 +9,7 @@ import { isValidVideoTitle, sanitizeString } from "@/lib/validation"
 import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_FETCH, 'Journal fetch request received');
+  Logger.d(LogTags.JOURNAL_FETCH, 'Journal fetch request received');
 
   try {
     await connectionToDatabase()
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId")
     const limit = searchParams.get("limit")
 
-    Logger.d(LogTags.VIDEO_FETCH, 'Query parameters parsed', { hasSearch: !!search, tag, userId, limit });
+    Logger.d(LogTags.JOURNAL_FETCH, 'Query parameters parsed', { hasSearch: !!search, tag, userId, limit });
 
     const query: Record<string, unknown> = {}
 
@@ -41,15 +41,15 @@ export async function GET(request: NextRequest) {
         { content: { $regex: sanitizedSearch, $options: "i" } },
         { tags: { $in: [new RegExp(sanitizedSearch, "i")] } }
       ]
-      Logger.d(LogTags.VIDEO_FETCH, 'Search query applied', { searchTerm: sanitizedSearch });
+      Logger.d(LogTags.JOURNAL_FETCH, 'Search query applied', { searchTerm: sanitizedSearch });
     }
 
     if (userId) {
       if (mongoose.Types.ObjectId.isValid(userId)) {
         query.author = new mongoose.Types.ObjectId(userId)
-        Logger.d(LogTags.VIDEO_FETCH, 'User-specific journal fetch', { userId });
+        Logger.d(LogTags.JOURNAL_FETCH, 'User-specific journal fetch', { userId });
       } else {
-        Logger.w(LogTags.VIDEO_FETCH, 'Invalid userId format', { userId });
+        Logger.w(LogTags.JOURNAL_FETCH, 'Invalid userId format', { userId });
         return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
       }
     }
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       .sort({ createdAt: -1 })
       .limit(limit ? parseInt(limit) : 50)
 
-    Logger.i(LogTags.VIDEO_FETCH, `Journals fetched successfully: ${journals.length} journals returned`);
+    Logger.i(LogTags.JOURNAL_FETCH, `Journals fetched successfully: ${journals.length} journals returned`);
     return NextResponse.json(journals)
   } catch (error) {
     const categorizedError = categorizeError(error);
@@ -69,23 +69,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_FETCH, `Unexpected error in journal fetch: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.JOURNAL_FETCH, `Unexpected error in journal fetch: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to fetch journals" }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_UPLOAD, 'Journal creation request received');
+  Logger.d(LogTags.JOURNAL_CREATE, 'Journal creation request received');
 
   try {
     const session = await getServerSession(authOptions)
 
     if (!session) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal creation failed: unauthorized access attempt');
+      Logger.w(LogTags.JOURNAL_CREATE, 'Journal creation failed: unauthorized access attempt');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+    Logger.d(LogTags.JOURNAL_CREATE, 'User authenticated', { userId: session.user.id });
 
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal creation');
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { title, content, tags, attachments, isPublic, mood, location } = body
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Request body parsed', {
+    Logger.d(LogTags.JOURNAL_CREATE, 'Request body parsed', {
       hasTitle: !!title,
       hasContent: !!content,
       tagsCount: tags?.length || 0,
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!title || !content) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal creation failed: missing required fields', {
+      Logger.w(LogTags.JOURNAL_CREATE, 'Journal creation failed: missing required fields', {
         hasTitle: !!title,
         hasContent: !!content
       });
@@ -111,13 +111,13 @@ export async function POST(request: NextRequest) {
 
     // Validate title
     if (!isValidVideoTitle(title)) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal creation failed: invalid title', { title });
+      Logger.w(LogTags.JOURNAL_CREATE, 'Journal creation failed: invalid title', { title });
       return NextResponse.json({ error: "Title must be between 1 and 100 characters" }, { status: 400 })
     }
 
     // Validate content length
     if (content.length > 10000) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal creation failed: content too long');
+      Logger.w(LogTags.JOURNAL_CREATE, 'Journal creation failed: content too long');
       return NextResponse.json({ error: "Content must be less than 10,000 characters" }, { status: 400 })
     }
 
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     const sanitizedMood = mood ? sanitizeString(mood) : undefined;
     const sanitizedLocation = location ? sanitizeString(location) : undefined;
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Input validation passed', { title: sanitizedTitle });
+    Logger.d(LogTags.JOURNAL_CREATE, 'Input validation passed', { title: sanitizedTitle });
 
     const journal = await Journal.create({
       title: sanitizedTitle,
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     const populatedJournal = await Journal.findById(journal._id).populate("author", "name avatar")
 
-    Logger.i(LogTags.VIDEO_UPLOAD, 'Journal created successfully', {
+    Logger.i(LogTags.JOURNAL_CREATE, 'Journal created successfully', {
       journalId: journal._id.toString(),
       userId: session.user.id,
       title: sanitizedTitle
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in journal creation: ${categorizedError.message}`, { error: categorizedError });
+      Logger.e(LogTags.JOURNAL_CREATE, `Validation error in journal creation: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
@@ -168,23 +168,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal creation: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.JOURNAL_CREATE, `Unexpected error in journal creation: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to create journal" }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_UPLOAD, 'Journal update request received');
+  Logger.d(LogTags.JOURNAL_UPDATE, 'Journal update request received');
 
   try {
     const session = await getServerSession(authOptions)
 
     if (!session) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal update failed: unauthorized access attempt');
+      Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: unauthorized access attempt');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+    Logger.d(LogTags.JOURNAL_UPDATE, 'User authenticated', { userId: session.user.id });
 
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal update');
@@ -193,14 +193,14 @@ export async function PUT(request: NextRequest) {
     const journalId = searchParams.get("id")
 
     if (!journalId) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal update failed: missing journal ID');
+      Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: missing journal ID');
       return NextResponse.json({ error: "Journal ID is required" }, { status: 400 })
     }
 
     const body = await request.json()
     const { title, content, tags, attachments, isPublic, mood, location } = body
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Update request body parsed', {
+    Logger.d(LogTags.JOURNAL_UPDATE, 'Update request body parsed', {
       journalId,
       hasTitle: !!title,
       hasContent: !!content,
@@ -211,12 +211,12 @@ export async function PUT(request: NextRequest) {
     // Find the journal and check ownership
     const existingJournal = await Journal.findById(journalId)
     if (!existingJournal) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal update failed: journal not found', { journalId });
+      Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: journal not found', { journalId });
       return NextResponse.json({ error: "Journal not found" }, { status: 404 })
     }
 
     if (existingJournal.author.toString() !== session.user.id) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal update failed: unauthorized access', {
+      Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: unauthorized access', {
         journalId,
         userId: session.user.id,
         authorId: existingJournal.author.toString()
@@ -226,13 +226,13 @@ export async function PUT(request: NextRequest) {
 
     // Validate title if provided
     if (title && !isValidVideoTitle(title)) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal update failed: invalid title', { title });
+      Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: invalid title', { title });
       return NextResponse.json({ error: "Title must be between 1 and 100 characters" }, { status: 400 })
     }
 
     // Validate content length if provided
     if (content && content.length > 10000) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal update failed: content too long');
+      Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: content too long');
       return NextResponse.json({ error: "Content must be less than 10,000 characters" }, { status: 400 })
     }
 
@@ -248,7 +248,7 @@ export async function PUT(request: NextRequest) {
 
     updateData.updatedAt = new Date();
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Update data prepared', { journalId });
+    Logger.d(LogTags.JOURNAL_UPDATE, 'Update data prepared', { journalId });
 
     const updatedJournal = await Journal.findByIdAndUpdate(
       journalId,
@@ -256,7 +256,7 @@ export async function PUT(request: NextRequest) {
       { new: true }
     ).populate("author", "name avatar")
 
-    Logger.i(LogTags.VIDEO_UPLOAD, 'Journal updated successfully', {
+    Logger.i(LogTags.JOURNAL_UPDATE, 'Journal updated successfully', {
       journalId,
       userId: session.user.id,
       title: updatedJournal?.title
@@ -267,7 +267,7 @@ export async function PUT(request: NextRequest) {
     const categorizedError = categorizeError(error);
 
     if (categorizedError instanceof ValidationError) {
-      Logger.e(LogTags.VIDEO_UPLOAD, `Validation error in journal update: ${categorizedError.message}`, { error: categorizedError });
+      Logger.e(LogTags.JOURNAL_UPDATE, `Validation error in journal update: ${categorizedError.message}`, { error: categorizedError });
       return NextResponse.json({ error: categorizedError.message }, { status: 400 });
     }
 
@@ -276,23 +276,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal update: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.JOURNAL_UPDATE, `Unexpected error in journal update: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to update journal" }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
-  Logger.d(LogTags.VIDEO_UPLOAD, 'Journal deletion request received');
+  Logger.d(LogTags.JOURNAL_DELETE, 'Journal deletion request received');
 
   try {
     const session = await getServerSession(authOptions)
 
     if (!session) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal deletion failed: unauthorized access attempt');
+      Logger.w(LogTags.JOURNAL_DELETE, 'Journal deletion failed: unauthorized access attempt');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'User authenticated', { userId: session.user.id });
+    Logger.d(LogTags.JOURNAL_DELETE, 'User authenticated', { userId: session.user.id });
 
     await connectionToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal deletion');
@@ -301,21 +301,21 @@ export async function DELETE(request: NextRequest) {
     const journalId = searchParams.get("id")
 
     if (!journalId) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal deletion failed: missing journal ID');
+      Logger.w(LogTags.JOURNAL_DELETE, 'Journal deletion failed: missing journal ID');
       return NextResponse.json({ error: "Journal ID is required" }, { status: 400 })
     }
 
-    Logger.d(LogTags.VIDEO_UPLOAD, 'Deletion request parsed', { journalId });
+    Logger.d(LogTags.JOURNAL_DELETE, 'Deletion request parsed', { journalId });
 
     // Find the journal and check ownership
     const existingJournal = await Journal.findById(journalId)
     if (!existingJournal) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal deletion failed: journal not found', { journalId });
+      Logger.w(LogTags.JOURNAL_DELETE, 'Journal deletion failed: journal not found', { journalId });
       return NextResponse.json({ error: "Journal not found" }, { status: 404 })
     }
 
     if (existingJournal.author.toString() !== session.user.id) {
-      Logger.w(LogTags.VIDEO_UPLOAD, 'Journal deletion failed: unauthorized access', {
+      Logger.w(LogTags.JOURNAL_DELETE, 'Journal deletion failed: unauthorized access', {
         journalId,
         userId: session.user.id,
         authorId: existingJournal.author.toString()
@@ -331,7 +331,7 @@ export async function DELETE(request: NextRequest) {
       $set: { 'stats.lastActive': new Date() }
     });
 
-    Logger.i(LogTags.VIDEO_UPLOAD, 'Journal deleted successfully', {
+    Logger.i(LogTags.JOURNAL_DELETE, 'Journal deleted successfully', {
       journalId,
       userId: session.user.id,
       title: existingJournal.title
@@ -346,7 +346,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
     }
 
-    Logger.e(LogTags.VIDEO_UPLOAD, `Unexpected error in journal deletion: ${categorizedError.message}`, { error: categorizedError });
+    Logger.e(LogTags.JOURNAL_DELETE, `Unexpected error in journal deletion: ${categorizedError.message}`, { error: categorizedError });
     return NextResponse.json({ error: "Failed to delete journal" }, { status: 500 })
   }
 }
