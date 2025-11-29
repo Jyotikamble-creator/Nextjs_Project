@@ -176,8 +176,6 @@ CORS_ORIGIN=http://localhost:3000
 
 <img width="1920" height="900" alt="journal" src="https://github.com/user-attachments/assets/7bbf67c3-ef86-43a6-be61-ac1184f63c14" />
 
-<img width="1920" height="900" alt="realdash" src="https://github.com/user-attachments/assets/88ad7824-5ed0-47ed-98e5-82729ec514f3" />
-
 <img width="1920" height="900" alt="realphoto" src="https://github.com/user-attachments/assets/71f44014-99e3-44f9-bd3b-a276a30ba3cf" />
 
 <img width="1920" height="900" alt="realvideo" src="https://github.com/user-attachments/assets/235eabb4-bc98-45f9-99ed-1aabc11daf98" />
@@ -185,6 +183,8 @@ CORS_ORIGIN=http://localhost:3000
 <img width="1920" height="900" alt="realjournal" src="https://github.com/user-attachments/assets/5e46bb33-2008-4d26-af40-e7956016c2ff" />
 
 <img width="1920" height="900" alt="realsearch" src="https://github.com/user-attachments/assets/1e7188b7-27dc-453d-9ff1-0f2b851b70f8" />
+
+<img width="1920" height="900" alt="realdash" src="https://github.com/user-attachments/assets/88ad7824-5ed0-47ed-98e5-82729ec514f3" />
 
 <img width="1920" height="900" alt="recent" src="https://github.com/user-attachments/assets/9889cc0e-b9b4-4064-aacd-956fd41bd216" />
 
