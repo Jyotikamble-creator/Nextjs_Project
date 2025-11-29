@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext"
 import Loader from "@/ui/Loader"
 import { useRouter } from "next/navigation"
 import axios from "axios"
-import { uploadToImageKit } from "@/utils/imagekitUpload"
+import { uploadToImageKit } from "@/lib/utils/imagekitUpload"
 
 export default function UploadPhotoPage() {
   const { isAuthenticated, loading, user } = useAuth()

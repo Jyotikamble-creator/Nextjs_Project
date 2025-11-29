@@ -4,7 +4,7 @@
 import { useState } from "react"
 import axios from "axios"
 import { Logger, LogTags, categorizeError } from "@/lib/logger"
-import { uploadToImageKit } from "@/utils/imagekitUpload"
+import { uploadToImageKit } from "@/lib/utils/imagekitUpload"
 
 interface UploadMetadata {
   title: string
