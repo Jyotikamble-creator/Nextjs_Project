@@ -6,18 +6,18 @@ import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from
 import { isValidEmail, isValidPassword, sanitizeString } from "@/lib/validation"
 
 export async function POST(request: NextRequest) {
-  Logger.d(LogTags.REGISTER, 'Registration request received');
+  Logger.d(LogTags.SIGNUP, 'Registration request received');
 
   try {
     // Parse request body and extract credentials
     const body = await request.json()
     const { email, password, name } = body
 
-    Logger.d(LogTags.REGISTER, 'Request body parsed', { hasEmail: !!email, hasPassword: !!password, hasName: !!name });
+    Logger.d(LogTags.SIGNUP, 'Request body parsed', { hasEmail: !!email, hasPassword: !!password, hasName: !!name });
 
     // Validate required credentials
     if (!email || !password) {
-      Logger.w(LogTags.REGISTER, 'Registration failed: missing email or password');
+      Logger.w(LogTags.SIGNUP, 'Registration failed: missing email or password');
       return NextResponse.json(
         { error: 'Email and password are required' },
         { status: 400 }

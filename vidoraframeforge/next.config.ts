@@ -29,6 +29,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Remove srcDir as it might be causing issues
 }
 
 module.exports = nextConfig
