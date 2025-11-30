@@ -40,13 +40,15 @@ VidoraFrameForge is a unified media sharing and digital journaling platform wher
 
 | Layer        | Technology                              |
 | ------------ | --------------------------------------- |
-| **Frontend** | Next.js 15, React 18, TypeScript        |
-| **Backend**  | Next.js API Routes, MongoDB, Mongoose   |
+| **Frontend** | Next.js 15 , React 18 , TypeScript        |
+| **Backend**  | Next.js API Routes , MongoDB , Mongoose   |
 | **Auth**     | NextAuth.js (JWT + Credentials Provider)|
-| **Storage**  | ImageKit                                |
-| **Styling**  | Tailwind CSS                            |
+| **HTTP**  | Axios
+| **Storage**  | ImageKit , MongoDB                               |
+| **Styling**  | TailwindCSS , PostCSS                            |
 | **Icons**    | Lucide React                            |
-| **Export**   | jsPDF, html2canvas                      |
+| **Export**   | jsPDF, html2canvas , ImageKit,                      |
+| **Utilities**   | clsx , tailwind-merge , classnames 
 
 ## 🚀 Getting Started
 
