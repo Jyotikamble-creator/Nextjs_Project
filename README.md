@@ -193,7 +193,7 @@ CORS_ORIGIN=http://localhost:3000
 ------
 ## 🌐 Live Demo
 
-🚀 **Website:** 
+🚀 **Website:** https://nextjs-project-6zdw.vercel.app/
 
 ## 🤝 Contributing
 
