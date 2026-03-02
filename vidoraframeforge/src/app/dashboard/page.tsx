@@ -280,6 +280,18 @@ export default function Dashboard() {
             <span className="truncate">Overview</span>
           </Link>
           <Link
+            href="/gallery"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+          >
+            <span className="truncate">Gallery</span>
+          </Link>
+          <Link
+            href="/timeline"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+          >
+            <span className="truncate">Timeline</span>
+          </Link>
+          <Link
             href="/photos"
             className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
