@@ -280,6 +280,12 @@ export default function Dashboard() {
             <span className="truncate">Overview</span>
           </Link>
           <Link
+            href="/insights"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+          >
+            <span className="truncate">Insights</span>
+          </Link>
+          <Link
             href="/gallery"
             className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
@@ -308,6 +314,12 @@ export default function Dashboard() {
             className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
           >
             <span className="truncate">Journals</span>
+          </Link>
+          <Link
+            href="/export"
+            className="flex-1 min-w-0 text-center px-1 sm:px-2 lg:px-4 py-2 text-xs sm:text-sm font-medium text-gray-400 hover:text-white rounded-md transition-colors"
+          >
+            <span className="truncate">Export</span>
           </Link>
           <Link
             href="/search"

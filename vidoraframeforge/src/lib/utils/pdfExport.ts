@@ -537,3 +537,303 @@ export const exportMultipleVideosToPDF = async (videos: VideoExportData[]): Prom
     throw new Error('Failed to generate video PDF collection')
   }
 }
+
+// Timeline export interface
+export interface TimelineItem {
+  type: 'photo' | 'video' | 'journal'
+  title: string
+  description?: string
+  content?: string
+  createdAt: Date
+  tags?: string[]
+  mood?: string
+  url?: string
+  thumbnailUrl?: string
+}
+
+export interface TimelineExportData {
+  userName: string
+  items: TimelineItem[]
+  dateRange: {
+    start: Date
+    end: Date
+  }
+}
+
+// Export full timeline as PDF
+export const exportTimelineToPDF = async (data: TimelineExportData): Promise<void> => {
+  try {
+    const pdf = new jsPDF()
+
+    // Title page
+    pdf.setFontSize(24)
+    pdf.setTextColor(40, 40, 40)
+    pdf.text('My Life Timeline', pdf.internal.pageSize.width / 2, 50, { align: 'center' })
+
+    pdf.setFontSize(14)
+    pdf.setTextColor(100, 100, 100)
+    pdf.text(data.userName, pdf.internal.pageSize.width / 2, 70, { align: 'center' })
+
+    pdf.setFontSize(11)
+    pdf.setTextColor(120, 120, 120)
+    const startDate = new Date(data.dateRange.start).toLocaleDateString()
+    const endDate = new Date(data.dateRange.end).toLocaleDateString()
+    pdf.text(`${startDate} - ${endDate}`, pdf.internal.pageSize.width / 2, 85, { align: 'center' })
+    pdf.text(`${data.items.length} memories`, pdf.internal.pageSize.width / 2, 95, { align: 'center' })
+
+    // Summary stats
+    const photoCount = data.items.filter(i => i.type === 'photo').length
+    const videoCount = data.items.filter(i => i.type === 'video').length
+    const journalCount = data.items.filter(i => i.type === 'journal').length
+
+    pdf.setFontSize(10)
+    pdf.setTextColor(60, 60, 60)
+    pdf.text(`📷 ${photoCount} photos  |  🎥 ${videoCount} videos  |  📝 ${journalCount} journals`, 
+      pdf.internal.pageSize.width / 2, 110, { align: 'center' })
+
+    // Timeline content
+    pdf.addPage()
+    let yPosition = 20
+
+    // Group items by month
+    const itemsByMonth: { [key: string]: TimelineItem[] } = {}
+    data.items.forEach(item => {
+      const monthKey = new Date(item.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+      if (!itemsByMonth[monthKey]) {
+        itemsByMonth[monthKey] = []
+      }
+      itemsByMonth[monthKey].push(item)
+    })
+
+    Object.entries(itemsByMonth).forEach(([month, items]) => {
+      // Check if we need a new page
+      if (yPosition > pdf.internal.pageSize.height - 40) {
+        pdf.addPage()
+        yPosition = 20
+      }
+
+      // Month header
+      pdf.setFillColor(59, 130, 246)
+      pdf.rect(10, yPosition - 5, pdf.internal.pageSize.width - 20, 10, 'F')
+      pdf.setFontSize(12)
+      pdf.setTextColor(255, 255, 255)
+      pdf.text(month, 15, yPosition + 2)
+      yPosition += 15
+
+      // Items in this month
+      items.forEach((item, index) => {
+        if (yPosition > pdf.internal.pageSize.height - 50) {
+          pdf.addPage()
+          yPosition = 20
+        }
+
+        // Type icon and title
+        pdf.setFontSize(11)
+        pdf.setTextColor(40, 40, 40)
+        const typeEmoji = item.type === 'photo' ? '📷' : item.type === 'video' ? '🎥' : '📝'
+        pdf.text(`${typeEmoji} ${item.title}`, 20, yPosition)
+        yPosition += 6
+
+        // Date
+        pdf.setFontSize(9)
+        pdf.setTextColor(120, 120, 120)
+        pdf.text(new Date(item.createdAt).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }), 20, yPosition)
+        yPosition += 5
+
+        // Mood (for journals)
+        if (item.mood) {
+          pdf.setFontSize(9)
+          pdf.setTextColor(234, 179, 8)
+          pdf.text(`Mood: ${item.mood}`, 20, yPosition)
+          yPosition += 5
+        }
+
+        // Description or content
+        if (item.description || item.content) {
+          pdf.setFontSize(9)
+          pdf.setTextColor(60, 60, 60)
+          const text = item.description || item.content || ''
+          const lines = pdf.splitTextToSize(text.substring(0, 300), 170)
+          pdf.text(lines.slice(0, 3), 20, yPosition)
+          yPosition += lines.slice(0, 3).length * 4 + 2
+        }
+
+        // Tags
+        if (item.tags && item.tags.length > 0) {
+          pdf.setFontSize(8)
+          pdf.setTextColor(147, 51, 234)
+          const tagsText = item.tags.slice(0, 5).map(tag => `#${tag}`).join(' ')
+          pdf.text(tagsText, 20, yPosition)
+          yPosition += 5
+        }
+
+        // URL (for reference)
+        if (item.url) {
+          pdf.setFontSize(7)
+          pdf.setTextColor(180, 180, 180)
+          pdf.text(item.url.substring(0, 80), 20, yPosition)
+          yPosition += 5
+        }
+
+        yPosition += 8 // Space between items
+
+        // Separator line
+        pdf.setDrawColor(220, 220, 220)
+        pdf.line(15, yPosition - 3, pdf.internal.pageSize.width - 15, yPosition - 3)
+      })
+
+      yPosition += 5
+    })
+
+    // Add footer to all pages
+    const pageCount = pdf.getNumberOfPages()
+    for (let i = 1; i <= pageCount; i++) {
+      pdf.setPage(i)
+      pdf.setFontSize(8)
+      pdf.setTextColor(150, 150, 150)
+      pdf.text(`Generated by VidoraFrameForge on ${new Date().toLocaleDateString()}`, 15, pdf.internal.pageSize.height - 10)
+      pdf.text(`Page ${i} of ${pageCount}`, pdf.internal.pageSize.width - 30, pdf.internal.pageSize.height - 10)
+    }
+
+    const fileName = `timeline_${data.userName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`
+    pdf.save(fileName)
+
+  } catch (error) {
+    console.error('Error generating timeline PDF:', error)
+    throw new Error('Failed to generate timeline PDF')
+  }
+}
+
+// ZIP export interface
+export interface ZipExportData {
+  userName: string
+  photos: Array<{
+    title: string
+    url: string
+    fileName: string
+    description?: string
+    tags?: string[]
+    createdAt: Date
+  }>
+  journals: Array<{
+    title: string
+    content: string
+    mood?: string
+    tags?: string[]
+    createdAt: Date
+  }>
+}
+
+// Export as ZIP with images and journals
+export const exportAsZip = async (data: ZipExportData): Promise<void> => {
+  try {
+    // Dynamic import of JSZip
+    const JSZip = (await import('jszip')).default
+    const zip = new JSZip()
+
+    // Create folders
+    const photosFolder = zip.folder('photos')
+    const journalsFolder = zip.folder('journals')
+
+    // Add README
+    const readmeContent = `VidoraFrameForge Export
+    
+User: ${data.userName}
+Export Date: ${new Date().toLocaleDateString()}
+Total Photos: ${data.photos.length}
+Total Journals: ${data.journals.length}
+
+---
+
+This archive contains:
+- photos/ - All your photo files
+- journals/ - All your journal entries in text format
+- index.json - Metadata for all your content
+
+Enjoy your memories!
+`
+    zip.file('README.txt', readmeContent)
+
+    // Create index metadata
+    const indexData = {
+      user: data.userName,
+      exportDate: new Date().toISOString(),
+      totalPhotos: data.photos.length,
+      totalJournals: data.journals.length,
+      photos: data.photos.map(p => ({
+        title: p.title,
+        fileName: p.fileName,
+        description: p.description,
+        tags: p.tags,
+        createdAt: p.createdAt
+      })),
+      journals: data.journals.map(j => ({
+        title: j.title,
+        mood: j.mood,
+        tags: j.tags,
+        createdAt: j.createdAt
+      }))
+    }
+    zip.file('index.json', JSON.stringify(indexData, null, 2))
+
+    // Download and add photos
+    for (let i = 0; i < data.photos.length; i++) {
+      const photo = data.photos[i]
+      try {
+        const response = await fetch(photo.url)
+        const blob = await response.blob()
+        const fileName = `${i + 1}_${photo.fileName}`.replace(/[^a-z0-9._-]/gi, '_')
+        
+        if (photosFolder) {
+          photosFolder.file(fileName, blob)
+          
+          // Add metadata file for each photo
+          const metadata = `Title: ${photo.title}
+Date: ${new Date(photo.createdAt).toLocaleString()}
+${photo.description ? `Description: ${photo.description}\n` : ''}${photo.tags && photo.tags.length > 0 ? `Tags: ${photo.tags.join(', ')}\n` : ''}`
+          
+          photosFolder.file(`${i + 1}_${photo.title.replace(/[^a-z0-9]/gi, '_')}.txt`, metadata)
+        }
+      } catch (error) {
+        console.error(`Failed to download photo: ${photo.title}`, error)
+        // Continue with other photos
+      }
+    }
+
+    // Add journals as text files
+    data.journals.forEach((journal, index) => {
+      const fileName = `${index + 1}_${journal.title.replace(/[^a-z0-9]/gi, '_')}.txt`
+      const content = `${journal.title}
+${new Date(journal.createdAt).toLocaleString()}
+${journal.mood ? `Mood: ${journal.mood}\n` : ''}${journal.tags && journal.tags.length > 0 ? `Tags: ${journal.tags.join(', ')}\n` : ''}
+---
+
+${journal.content}
+`
+      if (journalsFolder) {
+        journalsFolder.file(fileName, content)
+      }
+    })
+
+    // Generate ZIP and trigger download
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    const url = URL.createObjectURL(zipBlob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `vidoraframeforge_${data.userName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().toISOString().split('T')[0]}.zip`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+  } catch (error) {
+    console.error('Error generating ZIP export:', error)
+    throw new Error('Failed to generate ZIP export')
+  }
+}
