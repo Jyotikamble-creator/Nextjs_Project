@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import User from "@/server/models/User"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   Logger.d(LogTags.AUTH, 'User stats request received');
 
   try {
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for user stats');
 
     const { searchParams } = new URL(request.url)

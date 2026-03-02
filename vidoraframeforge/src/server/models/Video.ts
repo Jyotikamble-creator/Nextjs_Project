@@ -76,5 +76,12 @@ const videoSchema = new Schema<IVideo>(
   { timestamps: true },
 )
 
+// Indexes for optimized queries
+videoSchema.index({ uploader: 1, createdAt: -1 })
+videoSchema.index({ category: 1, isPublic: 1 })
+videoSchema.index({ isPublic: 1, createdAt: -1 })
+videoSchema.index({ tags: 1 })
+videoSchema.index({ title: 'text', description: 'text' })
+
 const Video = models?.Video || model<IVideo>("Video", videoSchema)
 export default Video

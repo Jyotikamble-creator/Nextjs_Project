@@ -1,4 +1,4 @@
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import User from "@/server/models/User"
 import { type NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12)
     Logger.d(LogTags.SIGNUP, 'Password hashed successfully');
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for registration');
 
     const existingUser = await User.findOne({ email: sanitizedEmail })

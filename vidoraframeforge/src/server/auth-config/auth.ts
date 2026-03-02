@@ -1,6 +1,6 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import User from "@/server/models/User"
 import * as bcrypt from "bcryptjs"
 import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError, AuthenticationError } from "@/lib/logger"
@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
         logger.auth.loginAttempt(normalizedEmail);
 
         try {
-          await connectionToDatabase()
+          await connectToDatabase()
 
           const user = await User.findOne({ email: normalizedEmail })
           if (!user) {

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError, AuthenticationError } from "@/lib/logger"
@@ -20,7 +20,7 @@ export async function PUT(request: NextRequest) {
 
     Logger.d(LogTags.USER_UPDATE, 'User authenticated', { userId: session.user.id })
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for profile update')
 
     const body = await request.json()

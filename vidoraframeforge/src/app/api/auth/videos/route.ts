@@ -1,62 +1,61 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import Video from "@/server/models/Video"
 import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/lib/validation"
+import { 
+  buildSearchQuery, 
+  buildCategoryQuery, 
+  buildUserQuery, 
+  mergeQueries 
+} from "@/server/utils/queryHelpers"
+import { updateUserStats, USER_POPULATE_OPTIONS } from "@/server/utils/apiHelpers"
 import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.VIDEO_FETCH, 'Video fetch request received');
 
   try {
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for video fetch');
 
     const { searchParams } = new URL(request.url)
     const category = searchParams.get("category")
     const search = searchParams.get("search")
     const userId = searchParams.get("userId")
+    const limit = parseInt(searchParams.get("limit") || "50")
 
-    Logger.d(LogTags.VIDEO_FETCH, 'Query parameters parsed', { category, hasSearch: !!search, userId });
+    Logger.d(LogTags.VIDEO_FETCH, 'Query parameters parsed', { category, hasSearch: !!search, userId, limit });
 
-    const query: Record<string, unknown> = {}
-
-    // Only filter by isPublic if not fetching user's own videos
-    if (!userId) {
-      query.isPublic = true
-    }
-
-    if (category && category !== "all") {
-      query.category = sanitizeString(category)
-    }
-
-    if (search) {
-      const sanitizedSearch = sanitizeString(search)
-      query.$or = [
-        { title: { $regex: sanitizedSearch, $options: "i" } },
-        { description: { $regex: sanitizedSearch, $options: "i" } }
-      ]
-      Logger.d(LogTags.VIDEO_FETCH, 'Search query applied', { searchTerm: sanitizedSearch });
-    }
-
+    // Build query using helpers
+    const baseQuery: Record<string, unknown> = userId ? {} : { isPublic: true }
+    const categoryQuery = buildCategoryQuery(category)
+    const searchQuery = search ? buildSearchQuery(search, ["title", "description"]) : {}
+    
+    let userQuery = {}
     if (userId) {
-      if (mongoose.Types.ObjectId.isValid(userId)) {
-        query.uploader = new mongoose.Types.ObjectId(userId)
-        Logger.d(LogTags.VIDEO_FETCH, 'User-specific video fetch', { userId, query });
-      } else {
+      try {
+        userQuery = buildUserQuery(userId, "uploader")
+      } catch (error) {
         Logger.w(LogTags.VIDEO_FETCH, 'Invalid userId format', { userId });
         return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
       }
     }
 
+    const query = mergeQueries(baseQuery, categoryQuery, searchQuery, userQuery)
     Logger.d(LogTags.VIDEO_FETCH, 'Final query:', query);
-    const videos = await Video.find(query).populate("uploader", "name avatar").sort({ createdAt: -1 }).limit(50)
+
+    // Optimized query with lean and limited fields
+    const videos = await Video.find(query)
+      .populate("uploader", USER_POPULATE_OPTIONS)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
 
     Logger.i(LogTags.VIDEO_FETCH, `Videos fetched successfully: ${videos.length} videos returned`);
-    console.log('Videos returned:', videos.map(v => ({ id: v._id, title: v.title, uploader: v.uploader })));
     return NextResponse.json(videos)
   } catch (error) {
     const categorizedError = categorizeError(error);
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
     }
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for video creation');
 
     const body = await request.json()
@@ -150,15 +149,13 @@ export async function POST(request: NextRequest) {
       Logger.d(LogTags.VIDEO_UPLOAD, 'Video created in database', { videoId: video._id.toString() });
       console.log('Video created:', { id: video._id, title: video.title, uploader: video.uploader });
 
-      const populatedVideo = await Video.findById(video._id).populate("uploader", "name avatar")
+      const populatedVideo = await Video.findById(video._id)
+        .populate("uploader", USER_POPULATE_OPTIONS)
+        .lean()
       Logger.d(LogTags.VIDEO_UPLOAD, 'Video populated with uploader data', { videoId: video._id.toString() });
 
-      // Update user stats
-      const userUpdateResult = await User.findByIdAndUpdate(session.user.id, {
-        $inc: { 'stats.totalVideos': 1 },
-        $set: { 'stats.lastActive': new Date() }
-      });
-      Logger.d(LogTags.VIDEO_UPLOAD, 'User stats updated', { userId: session.user.id, updateResult: !!userUpdateResult });
+      // Update user stats using helper
+      await updateUserStats(session.user.id, { totalVideos: 1 });
 
       Logger.i(LogTags.VIDEO_UPLOAD, 'Video created successfully', {
         videoId: video._id.toString(),

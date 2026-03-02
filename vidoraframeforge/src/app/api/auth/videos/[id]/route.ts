@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import Video from "@/server/models/Video"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
@@ -21,7 +21,7 @@ export async function DELETE(
 
     Logger.d(LogTags.VIDEO_DELETE, 'User authenticated', { userId: session.user.id });
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for video deletion');
 
     // Find the video first to check ownership

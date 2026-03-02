@@ -1,63 +1,58 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import Journal from "@/server/models/Journal"
 import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, sanitizeString } from "@/lib/validation"
+import { 
+  buildSearchQuery, 
+  buildTagQuery, 
+  buildUserQuery, 
+  mergeQueries 
+} from "@/server/utils/queryHelpers"
+import { updateUserStats, USER_POPULATE_OPTIONS } from "@/server/utils/apiHelpers"
 import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.JOURNAL_FETCH, 'Journal fetch request received');
 
   try {
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal fetch');
 
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
     const tag = searchParams.get("tag")
     const userId = searchParams.get("userId")
-    const limit = searchParams.get("limit")
+    const limit = parseInt(searchParams.get("limit") || "50")
 
     Logger.d(LogTags.JOURNAL_FETCH, 'Query parameters parsed', { hasSearch: !!search, tag, userId, limit });
 
-    const query: Record<string, unknown> = {}
-
-    // Only filter by isPublic if not fetching user's own journals
-    if (!userId) {
-      query.isPublic = true
-    }
-
-    if (tag) {
-      query.tags = { $in: [sanitizeString(tag)] }
-    }
-
-    if (search) {
-      const sanitizedSearch = sanitizeString(search)
-      query.$or = [
-        { title: { $regex: sanitizedSearch, $options: "i" } },
-        { content: { $regex: sanitizedSearch, $options: "i" } },
-        { tags: { $in: [new RegExp(sanitizedSearch, "i")] } }
-      ]
-      Logger.d(LogTags.JOURNAL_FETCH, 'Search query applied', { searchTerm: sanitizedSearch });
-    }
-
+    // Build query using helpers
+    const baseQuery: Record<string, unknown> = userId ? {} : { isPublic: true }
+    const tagQuery = buildTagQuery(tag)
+    const searchQuery = search ? buildSearchQuery(search, ["title", "content"]) : {}
+    
+    let userQuery = {}
     if (userId) {
-      if (mongoose.Types.ObjectId.isValid(userId)) {
-        query.author = new mongoose.Types.ObjectId(userId)
-        Logger.d(LogTags.JOURNAL_FETCH, 'User-specific journal fetch', { userId });
-      } else {
+      try {
+        userQuery = buildUserQuery(userId, "author") // Journal uses 'author' field
+      } catch (error) {
         Logger.w(LogTags.JOURNAL_FETCH, 'Invalid userId format', { userId });
         return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
       }
     }
 
+    const query = mergeQueries(baseQuery, tagQuery, searchQuery, userQuery)
+
+    // Optimized query
     const journals = await Journal.find(query)
-      .populate("author", "name avatar")
+      .populate("author", USER_POPULATE_OPTIONS)
       .sort({ createdAt: -1 })
-      .limit(limit ? parseInt(limit) : 50)
+      .limit(limit)
+      .lean()
 
     Logger.i(LogTags.JOURNAL_FETCH, `Journals fetched successfully: ${journals.length} journals returned`);
     return NextResponse.json(journals)
@@ -87,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     Logger.d(LogTags.JOURNAL_CREATE, 'User authenticated', { userId: session.user.id });
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal creation');
 
     const body = await request.json()
@@ -140,13 +135,12 @@ export async function POST(request: NextRequest) {
       location: sanitizedLocation,
     })
 
-    // Update user stats
-    await User.findByIdAndUpdate(session.user.id, {
-      $inc: { 'stats.totalJournals': 1 },
-      $set: { 'stats.lastActive': new Date() }
-    });
+    // Update user stats using helper
+    await updateUserStats(session.user.id, { totalJournals: 1 });
 
-    const populatedJournal = await Journal.findById(journal._id).populate("author", "name avatar")
+    const populatedJournal = await Journal.findById(journal._id)
+      .populate("author", USER_POPULATE_OPTIONS)
+      .lean()
 
     Logger.i(LogTags.JOURNAL_CREATE, 'Journal created successfully', {
       journalId: journal._id.toString(),
@@ -186,7 +180,7 @@ export async function PUT(request: NextRequest) {
 
     Logger.d(LogTags.JOURNAL_UPDATE, 'User authenticated', { userId: session.user.id });
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal update');
 
     const { searchParams } = new URL(request.url)
@@ -294,7 +288,7 @@ export async function DELETE(request: NextRequest) {
 
     Logger.d(LogTags.JOURNAL_DELETE, 'User authenticated', { userId: session.user.id });
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal deletion');
 
     const { searchParams } = new URL(request.url)
@@ -325,11 +319,8 @@ export async function DELETE(request: NextRequest) {
 
     await Journal.findByIdAndDelete(journalId)
 
-    // Update user stats
-    await User.findByIdAndUpdate(session.user.id, {
-      $inc: { 'stats.totalJournals': -1 },
-      $set: { 'stats.lastActive': new Date() }
-    });
+    // Update user stats using helper
+    await updateUserStats(session.user.id, { totalJournals: -1 });
 
     Logger.i(LogTags.JOURNAL_DELETE, 'Journal deleted successfully', {
       journalId,

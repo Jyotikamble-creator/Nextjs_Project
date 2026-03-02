@@ -75,7 +75,10 @@ const userSchema = new Schema<IUser>(
   },
 )
 
-// Removed duplicate index - unique: true already creates an index
+// Indexes for optimized queries
+userSchema.index({ email: 1 }) // unique: true already creates index, this ensures it's explicit
+userSchema.index({ 'stats.lastActive': -1 })
+userSchema.index({ createdAt: -1 })
 
 const User = models?.User || model<IUser>("User", userSchema)
 export default User

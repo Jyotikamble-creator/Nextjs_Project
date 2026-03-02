@@ -22,7 +22,7 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null }
 }
 
-export async function connectionToDatabase() {
+export async function connectToDatabase() {
   if (cached.conn) {
     Logger.d(LogTags.DB_CONNECT, 'Using existing database connection');
     return cached.conn

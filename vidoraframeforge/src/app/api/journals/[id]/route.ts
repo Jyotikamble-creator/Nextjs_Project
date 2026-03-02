@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import Journal from "@/server/models/Journal"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
@@ -10,7 +10,7 @@ export async function GET(
   Logger.d(LogTags.JOURNAL_FETCH, 'Individual journal fetch request received', { journalId: params.id });
 
   try {
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for individual journal fetch');
 
     const journal = await Journal.findById(params.id).populate("author", "name avatar")

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import Video from "@/server/models/Video"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
@@ -8,7 +8,7 @@ export async function GET(req: Request) {
   Logger.d(LogTags.VIDEO_FETCH, 'Video retrieval request received');
 
   try {
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for video retrieval');
 
     const url = new URL(req.url)

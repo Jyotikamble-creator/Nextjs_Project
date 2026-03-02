@@ -1,59 +1,58 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectionToDatabase } from "@/server/db"
+import { connectToDatabase } from "@/server/db"
 import Photo from "@/server/models/Photo"
 import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/lib/validation"
+import { 
+  buildSearchQuery, 
+  buildAlbumQuery, 
+  buildUserQuery, 
+  mergeQueries 
+} from "@/server/utils/queryHelpers"
+import { updateUserStats, USER_POPULATE_OPTIONS } from "@/server/utils/apiHelpers"
 import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.PHOTO_FETCH, 'Photo fetch request received');
 
   try {
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo fetch');
 
     const { searchParams } = new URL(request.url)
     const album = searchParams.get("album")
     const search = searchParams.get("search")
     const userId = searchParams.get("userId")
+    const limit = parseInt(searchParams.get("limit") || "50")
 
-    Logger.d(LogTags.PHOTO_FETCH, 'Query parameters parsed', { album, hasSearch: !!search, userId });
+    Logger.d(LogTags.PHOTO_FETCH, 'Query parameters parsed', { album, hasSearch: !!search, userId, limit });
 
-    const query: Record<string, unknown> = {}
-
-    // Only filter by isPublic if not fetching user's own photos
-    if (!userId) {
-      query.isPublic = true
-    }
-
-    if (album && album !== "all") {
-      query.album = sanitizeString(album)
-    }
-
-    if (search) {
-      const sanitizedSearch = sanitizeString(search)
-      query.$or = [
-        { title: { $regex: sanitizedSearch, $options: "i" } },
-        { description: { $regex: sanitizedSearch, $options: "i" } },
-        { tags: { $in: [new RegExp(sanitizedSearch, "i")] } }
-      ]
-      Logger.d(LogTags.PHOTO_FETCH, 'Search query applied', { searchTerm: sanitizedSearch });
-    }
-
+    // Build query using helpers
+    const baseQuery: Record<string, unknown> = userId ? {} : { isPublic: true }
+    const albumQuery = buildAlbumQuery(album)
+    const searchQuery = search ? buildSearchQuery(search, ["title", "description"]) : {}
+    
+    let userQuery = {}
     if (userId) {
-      if (mongoose.Types.ObjectId.isValid(userId)) {
-        query.uploader = new mongoose.Types.ObjectId(userId)
-        Logger.d(LogTags.PHOTO_FETCH, 'User-specific photo fetch', { userId });
-      } else {
+      try {
+        userQuery = buildUserQuery(userId, "uploader")
+      } catch (error) {
         Logger.w(LogTags.PHOTO_FETCH, 'Invalid userId format', { userId });
         return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
       }
     }
 
-    const photos = await Photo.find(query).populate("uploader", "name avatar").sort({ createdAt: -1 }).limit(50)
+    const query = mergeQueries(baseQuery, albumQuery, searchQuery, userQuery)
+
+    // Optimized query
+    const photos = await Photo.find(query)
+      .populate("uploader", USER_POPULATE_OPTIONS)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
 
     Logger.i(LogTags.PHOTO_FETCH, `Photos fetched successfully: ${photos.length} photos returned`);
     return NextResponse.json(photos)
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'User authenticated', { userId: session.user.id });
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo creation');
 
     const body = await request.json()
@@ -144,13 +143,12 @@ export async function POST(request: NextRequest) {
       height,
     })
 
-    // Update user stats
-    await User.findByIdAndUpdate(session.user.id, {
-      $inc: { 'stats.totalPhotos': 1 },
-      $set: { 'stats.lastActive': new Date() }
-    });
+    // Update user stats using helper
+    await updateUserStats(session.user.id, { totalPhotos: 1 });
 
-    const populatedPhoto = await Photo.findById(photo._id).populate("uploader", "name avatar")
+    const populatedPhoto = await Photo.findById(photo._id)
+      .populate("uploader", USER_POPULATE_OPTIONS)
+      .lean()
 
     Logger.i(LogTags.PHOTO_UPLOAD, 'Photo created successfully', {
       photoId: photo._id.toString(),
@@ -190,7 +188,7 @@ export async function PUT(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'User authenticated', { userId: session.user.id });
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo update');
 
     const { searchParams } = new URL(request.url)
@@ -290,7 +288,7 @@ export async function DELETE(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_DELETE, 'User authenticated', { userId: session.user.id });
 
-    await connectionToDatabase()
+    await connectToDatabase()
     Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo deletion');
 
     const { searchParams } = new URL(request.url)
@@ -321,11 +319,8 @@ export async function DELETE(request: NextRequest) {
 
     await Photo.findByIdAndDelete(photoId)
 
-    // Update user stats
-    await User.findByIdAndUpdate(session.user.id, {
-      $inc: { 'stats.totalPhotos': -1 },
-      $set: { 'stats.lastActive': new Date() }
-    });
+    // Update user stats using helper
+    await updateUserStats(session.user.id, { totalPhotos: -1 });
 
     Logger.i(LogTags.PHOTO_DELETE, 'Photo deleted successfully', {
       photoId,
