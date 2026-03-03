@@ -19,9 +19,11 @@ export interface IPhoto extends Document {
   album?: string
   location?: string
   takenAt?: Date
-  isPublic: boolean
+  privacy?: "public" | "private" | "friends"
+  isPublic: boolean // Deprecated, kept for backward compatibility
   views?: number
   likes?: number
+  commentCount?: number
   createdAt: Date
   updatedAt: Date
 }
@@ -78,15 +80,24 @@ const photoSchema = new Schema<IPhoto>(
       maxlength: [100, "Location cannot exceed 100 characters"],
     },
     takenAt: Date,
+    privacy: { 
+      type: String, 
+      enum: ["public", "private", "friends"], 
+      default: "public" 
+    },
     isPublic: {
       type: Boolean,
-      default: true,
+      default: true, // Deprecated, use privacy instead
     },
     views: {
       type: Number,
       default: 0,
     },
     likes: {
+      type: Number,
+      default: 0,
+    },
+    commentCount: {
       type: Number,
       default: 0,
     },
@@ -100,7 +111,9 @@ const photoSchema = new Schema<IPhoto>(
 photoSchema.index({ uploader: 1, createdAt: -1 })
 photoSchema.index({ tags: 1 })
 photoSchema.index({ album: 1 })
-photoSchema.index({ isPublic: 1, createdAt: -1 })
+photoSchema.index({ privacy: 1, createdAt: -1 })
+photoSchema.index({ isPublic: 1, createdAt: -1 }) // Legacy index
+photoSchema.index({ title: 'text', description: 'text' }) // Full-text search
 
 const Photo = models?.Photo || model<IPhoto>("Photo", photoSchema)
 export default Photo

@@ -17,9 +17,12 @@ export interface IJournal extends Document {
     fileName: string
     size: number
   }[]
-  isPublic: boolean
+  privacy?: "public" | "private" | "friends"
+  isPublic: boolean // Deprecated, kept for backward compatibility
   mood?: string
   location?: string
+  likes?: number
+  commentCount?: number
   createdAt: Date
   updatedAt: Date
 }
@@ -71,9 +74,14 @@ const journalSchema = new Schema<IJournal>(
         required: true,
       },
     }],
+    privacy: { 
+      type: String, 
+      enum: ["public", "private", "friends"], 
+      default: "private" 
+    },
     isPublic: {
       type: Boolean,
-      default: false,
+      default: false, // Deprecated, use privacy instead
     },
     mood: {
       type: String,
@@ -85,6 +93,14 @@ const journalSchema = new Schema<IJournal>(
       trim: true,
       maxlength: [100, "Location cannot exceed 100 characters"],
     },
+    likes: {
+      type: Number,
+      default: 0,
+    },
+    commentCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
@@ -94,7 +110,9 @@ const journalSchema = new Schema<IJournal>(
 // Indexes for better query performance
 journalSchema.index({ author: 1, createdAt: -1 })
 journalSchema.index({ tags: 1 })
-journalSchema.index({ isPublic: 1, createdAt: -1 })
+journalSchema.index({ privacy: 1, createdAt: -1 })
+journalSchema.index({ isPublic: 1, createdAt: -1 }) // Legacy index
+journalSchema.index({ title: 'text', content: 'text' }) // Full-text search
 
 const Journal = models?.Journal || model<IJournal>("Journal", journalSchema)
 export default Journal

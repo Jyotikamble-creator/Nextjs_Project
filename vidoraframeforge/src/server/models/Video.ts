@@ -19,12 +19,14 @@ export interface IVideo {
   }
   views?: number
   likes?: number
+  commentCount?: number
   tags?: string[]
   category?: string
   album?: string
   location?: string
   takenAt?: Date
-  isPublic?: boolean
+  privacy?: "public" | "private" | "friends"
+  isPublic?: boolean // Deprecated, kept for backward compatibility
   fileId?: string
   fileName?: string
   duration?: number
@@ -48,6 +50,7 @@ const videoSchema = new Schema<IVideo>(
     uploader: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     views: { type: Number, default: 0 },
     likes: { type: Number, default: 0 },
+    commentCount: { type: Number, default: 0 },
     tags: [{ type: String }],
     category: { type: String },
     album: {
@@ -61,7 +64,12 @@ const videoSchema = new Schema<IVideo>(
       maxlength: [100, "Location cannot exceed 100 characters"],
     },
     takenAt: Date,
-    isPublic: { type: Boolean, default: true },
+    privacy: { 
+      type: String, 
+      enum: ["public", "private", "friends"], 
+      default: "public" 
+    },
+    isPublic: { type: Boolean, default: true }, // Deprecated, use privacy instead
     fileId: { type: String },
     fileName: { type: String },
     duration: { type: Number, default: 0 },
@@ -78,10 +86,11 @@ const videoSchema = new Schema<IVideo>(
 
 // Indexes for optimized queries
 videoSchema.index({ uploader: 1, createdAt: -1 })
-videoSchema.index({ category: 1, isPublic: 1 })
-videoSchema.index({ isPublic: 1, createdAt: -1 })
+videoSchema.index({ category: 1, privacy: 1 })
+videoSchema.index({ privacy: 1, createdAt: -1 })
+videoSchema.index({ isPublic: 1, createdAt: -1 }) // Legacy index
 videoSchema.index({ tags: 1 })
-videoSchema.index({ title: 'text', description: 'text' })
+videoSchema.index({ title: 'text', description: 'text' }) // Full-text search
 
 const Video = models?.Video || model<IVideo>("Video", videoSchema)
 export default Video

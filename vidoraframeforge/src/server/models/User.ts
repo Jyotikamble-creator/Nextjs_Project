@@ -6,12 +6,15 @@ export interface IUser extends Document {
   password: string
   role: "admin" | "user"
   avatar?: string
+  bio?: string
   stats: {
     totalPhotos: number
     totalVideos: number
     totalJournals: number
     lastActive: Date
     streak: number
+    followerCount: number
+    followingCount: number
   }
   createdAt: Date
   updatedAt: Date
@@ -47,6 +50,11 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: "",
     },
+    bio: {
+      type: String,
+      maxlength: [200, "Bio cannot exceed 200 characters"],
+      default: "",
+    },
     stats: {
       totalPhotos: {
         type: Number,
@@ -65,6 +73,14 @@ const userSchema = new Schema<IUser>(
         default: Date.now,
       },
       streak: {
+        type: Number,
+        default: 0,
+      },
+      followerCount: {
+        type: Number,
+        default: 0,
+      },
+      followingCount: {
         type: Number,
         default: 0,
       },
