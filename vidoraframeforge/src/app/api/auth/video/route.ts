@@ -1,10 +1,21 @@
-import { NextResponse } from "next/server"
-import { connectToDatabase } from "@/server/db"
-import Video from "@/server/models/Video"
-import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
+import { type NextRequest, NextResponse } from "next/server"
+import { VideoController } from "@/server/controllers/video.controller"
 
-// Server-side GET handler to return a video by id: /api/auth/video?id=...
-export async function GET(req: Request) {
+/**
+ * Single Video API Route
+ * Thin route handler that delegates to VideoController
+ */
+
+const videoController = new VideoController()
+
+// GET /api/auth/video?id=123
+export async function GET(request: NextRequest) {
+  return videoController.getVideoById(request)
+}
+
+// Keep old implementation commented for reference
+/*
+export async function GET_OLD(req: Request) {
   Logger.d(LogTags.VIDEO_FETCH, 'Video retrieval request received');
 
   try {

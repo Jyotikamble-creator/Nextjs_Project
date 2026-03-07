@@ -1,11 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { connectToDatabase } from "@/server/db"
-import Video from "@/server/models/Video"
-import { authOptions } from "@/server/auth-config/auth"
-import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
+import { VideoController } from "@/server/controllers/video.controller"
 
+/**
+ * Video by ID API Routes
+ * Thin route handlers that delegate to VideoController
+ */
+
+const videoController = new VideoController()
+
+// DELETE /api/auth/videos/[id]
 export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return videoController.deleteVideo(request, params.id)
+}
+
+// Keep old implementation commented for reference
+/*
+export async function DELETE_OLD(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {

@@ -92,7 +92,7 @@ const userSchema = new Schema<IUser>(
 )
 
 // Indexes for optimized queries
-userSchema.index({ email: 1 }) // unique: true already creates index, this ensures it's explicit
+// Note: email field already has unique: true which creates an index automatically
 userSchema.index({ 'stats.lastActive': -1 })
 userSchema.index({ createdAt: -1 })
 

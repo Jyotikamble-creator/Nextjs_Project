@@ -1,21 +1,26 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { connectToDatabase } from "@/server/db"
-import Video from "@/server/models/Video"
-import User from "@/server/models/User"
-import { authOptions } from "@/server/auth-config/auth"
-import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
-import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/lib/validation"
-import { 
-  buildSearchQuery, 
-  buildCategoryQuery, 
-  buildUserQuery, 
-  mergeQueries 
-} from "@/server/utils/queryHelpers"
-import { updateUserStats, USER_POPULATE_OPTIONS } from "@/server/utils/apiHelpers"
-import mongoose from "mongoose"
+import { VideoController } from "@/server/controllers/video.controller"
 
+/**
+ * Video API Routes
+ * Thin route handlers that delegate to VideoController
+ */
+
+const videoController = new VideoController()
+
+// GET /api/auth/videos?category=gaming&search=tutorial&userId=123&limit=10
 export async function GET(request: NextRequest) {
+  return videoController.getVideos(request)
+}
+
+// POST /api/auth/videos
+export async function POST(request: NextRequest) {
+  return videoController.createVideo(request)
+}
+
+// Keep old implementation commented for reference
+/*
+export async function GET_OLD(request: NextRequest) {
   Logger.d(LogTags.VIDEO_FETCH, 'Video fetch request received');
 
   try {
@@ -189,3 +194,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Failed to create video" }, { status: 500 })
   }
 }
+*/

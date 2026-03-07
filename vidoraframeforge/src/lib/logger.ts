@@ -33,6 +33,7 @@ export const LogTags = {
   // Photo operations
   PHOTO_FETCH: 'PHOTO_FETCH',
   PHOTO_UPLOAD: 'PHOTO_UPLOAD',
+  PHOTO_UPDATE: 'PHOTO_UPDATE',
   PHOTO_DELETE: 'PHOTO_DELETE',
 
   // API operations
