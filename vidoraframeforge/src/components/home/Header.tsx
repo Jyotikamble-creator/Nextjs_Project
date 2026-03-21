@@ -15,6 +15,9 @@ export default function Header() {
               src="/images/logo.png"
               alt="VidoraFrameForge Logo"
               fill
+              priority
+              loading="eager"
+              sizes="(max-width: 768px) 48px, 64px"
               className="rounded-full object-cover"
             />
           </div>
