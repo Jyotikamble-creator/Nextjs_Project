@@ -20,12 +20,18 @@ export const UpNextSidebar = ({ videos }: UpNextSidebarProps) => {
             className="flex gap-3 group hover:bg-white/5 rounded-lg p-2 transition-colors"
           >
             <div className="relative w-40 aspect-video rounded-lg overflow-hidden shrink-0 bg-gray-800">
-              <Image
-                src={video.thumbnail}
-                alt={video.title}
-                fill
-                className="object-cover group-hover:scale-105 transition-transform"
-              />
+              {video.thumbnail ? (
+                <Image
+                  src={video.thumbnail}
+                  alt={video.title || "Video thumbnail"}
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-700">
+                  <span className="text-gray-500 text-xs">No thumbnail</span>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 space-y-1">

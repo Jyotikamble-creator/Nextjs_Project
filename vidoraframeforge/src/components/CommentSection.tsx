@@ -3,20 +3,40 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/context/AuthContext"
 import { MessageCircle, Send, Loader2, Edit2, Trash2, Reply } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
+
+// Simple date formatter to show relative time
+const formatDistanceToNow = (date: Date | string): string => {
+  const now = new Date()
+  const targetDate = new Date(date)
+  const seconds = Math.floor((now.getTime() - targetDate.getTime()) / 1000)
+
+  if (seconds < 60) return "just now"
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return `${weeks}w ago`
+  return targetDate.toLocaleDateString()
+}
 
 interface Comment {
-  _id: string
-  author: {
-    _id: string
+  id: string
+  userId: string
+  contentType: string
+  contentId: string
+  text: string
+  parentCommentId?: string | null
+  createdAt: string
+  updatedAt?: string
+  user: {
+    id: string
     name: string
     email: string
     avatar?: string
   }
-  content: string
-  likes: string[]
-  isEdited: boolean
-  createdAt: string
   replies?: Comment[]
 }
 
@@ -109,7 +129,7 @@ export function CommentSection({
       if (response.ok) {
         const data = await response.json()
         setComments(
-          comments.map((c) => (c._id === commentId ? data.comment : c))
+          comments.map((c) => (c.id === commentId ? data.comment : c))
         )
         setEditingId(null)
         setEditContent("")
@@ -129,7 +149,7 @@ export function CommentSection({
       })
 
       if (response.ok) {
-        setComments(comments.filter((c) => c._id !== commentId))
+        setComments(comments.filter((c) => c.id !== commentId))
         setCommentCount((prev) => Math.max(0, prev - 1))
       }
     } catch (error) {
@@ -226,39 +246,34 @@ export function CommentSection({
       ) : (
         <div className="space-y-4">
           {comments.map((comment) => (
-            <div key={comment._id} className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div key={comment.id} className="bg-white/5 border border-white/10 rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold shrink-0">
-                  {comment.author.name.charAt(0).toUpperCase()}
+                  {comment.user?.name?.charAt(0).toUpperCase() || "C"}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <div>
                       <span className="font-semibold text-white">
-                        {comment.author.name}
+                        {comment.user?.name || "Anonymous"}
                       </span>
                       <span className="text-gray-400 text-sm ml-2">
-                        {formatDistanceToNow(new Date(comment.createdAt), {
-                          addSuffix: true,
-                        })}
+                        {formatDistanceToNow(comment.createdAt)}
                       </span>
-                      {comment.isEdited && (
-                        <span className="text-gray-500 text-xs ml-2">(edited)</span>
-                      )}
                     </div>
-                    {user?.id === comment.author._id && (
+                    {user?.id === comment.userId && (
                       <div className="flex gap-2">
                         <button
                           onClick={() => {
-                            setEditingId(comment._id)
-                            setEditContent(comment.content)
+                            setEditingId(comment.id)
+                            setEditContent(comment.text)
                           }}
                           className="text-gray-400 hover:text-white p-1"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteComment(comment._id)}
+                          onClick={() => handleDeleteComment(comment.id)}
                           className="text-gray-400 hover:text-red-400 p-1"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -267,7 +282,7 @@ export function CommentSection({
                     )}
                   </div>
 
-                  {editingId === comment._id ? (
+                  {editingId === comment.id ? (
                     <div className="flex gap-2 mt-2">
                       <input
                         type="text"
@@ -277,7 +292,7 @@ export function CommentSection({
                         maxLength={500}
                       />
                       <button
-                        onClick={() => handleEditComment(comment._id)}
+                        onClick={() => handleEditComment(comment.id)}
                         className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm"
                       >
                         Save
@@ -293,13 +308,13 @@ export function CommentSection({
                       </button>
                     </div>
                   ) : (
-                    <p className="text-gray-300">{comment.content}</p>
+                    <p className="text-gray-300">{comment.text}</p>
                   )}
 
                   {/* Reply button */}
-                  {isAuthenticated && editingId !== comment._id && (
+                  {isAuthenticated && editingId !== comment.id && (
                     <button
-                      onClick={() => setReplyingTo(comment._id)}
+                      onClick={() => setReplyingTo(comment.id)}
                       className="text-sm text-purple-400 hover:text-purple-300 mt-2 flex items-center gap-1"
                     >
                       <Reply className="w-3 h-3" />
@@ -308,7 +323,7 @@ export function CommentSection({
                   )}
 
                   {/* Reply form */}
-                  {replyingTo === comment._id && (
+                  {replyingTo === comment.id && (
                     <div className="flex gap-2 mt-3">
                       <input
                         type="text"
@@ -319,7 +334,7 @@ export function CommentSection({
                         maxLength={500}
                       />
                       <button
-                        onClick={() => handleReply(comment._id)}
+                        onClick={() => handleReply(comment.id)}
                         className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm"
                       >
                         Reply
@@ -340,22 +355,20 @@ export function CommentSection({
                   {comment.replies && comment.replies.length > 0 && (
                     <div className="ml-6 mt-3 space-y-3 border-l-2 border-white/10 pl-4">
                       {comment.replies.map((reply) => (
-                        <div key={reply._id} className="flex items-start gap-3">
+                        <div key={reply.id} className="flex items-start gap-3">
                           <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-400 to-cyan-400 flex items-center justify-center text-white font-semibold shrink-0 text-sm">
-                            {reply.author.name.charAt(0).toUpperCase()}
+                            {reply.user?.name?.charAt(0).toUpperCase() || "R"}
                           </div>
                           <div className="flex-1">
                             <div>
                               <span className="font-semibold text-white text-sm">
-                                {reply.author.name}
+                                {reply.user?.name || "Anonymous"}
                               </span>
                               <span className="text-gray-400 text-xs ml-2">
-                                {formatDistanceToNow(new Date(reply.createdAt), {
-                                  addSuffix: true,
-                                })}
+                                {formatDistanceToNow(reply.createdAt)}
                               </span>
                             </div>
-                            <p className="text-gray-300 text-sm">{reply.content}</p>
+                            <p className="text-gray-300 text-sm">{reply.text}</p>
                           </div>
                         </div>
                       ))}

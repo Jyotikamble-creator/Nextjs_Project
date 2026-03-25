@@ -18,20 +18,20 @@ export const VideoInfo = ({ video }: VideoInfoProps) => {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-linear-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-semibold">
-              {video.creator.avatar ? (
+              {video.creator?.avatar ? (
                 <img
                   src={video.creator.avatar}
                   alt={video.creator.name}
                   className="w-full h-full rounded-full object-cover"
                 />
               ) : (
-                video.creator.name.charAt(0)
+                video.creator?.name?.charAt(0) || "?"
               )}
             </div>
             <div>
-              <div className="font-semibold text-white">{video.creator.name}</div>
+              <div className="font-semibold text-white">{video.creator?.name || "Unknown Creator"}</div>
               <div className="text-sm text-gray-400">
-                {formatSubscribers(video.creator.subscribers)} subscribers
+                {formatSubscribers(video.creator?.subscribers || 0)} subscribers
               </div>
             </div>
           </div>
