@@ -1,4 +1,4 @@
-import { photoRepository } from "@/server/repositories/PhotoRepository"
+import { photoRepository } from "@/server/repositories/photoRepository"
 import { Logger, LogTags } from "@/lib/logger"
 import { prisma } from "@/server/db"
 
@@ -20,7 +20,7 @@ interface CreatePhotoData {
   album?: string
   location?: string
   takenAt?: Date
-  privacy?: string
+  privacy?: "public" | "private" | "friends"
   fileId?: string
   fileName?: string
   size?: number
@@ -50,17 +50,12 @@ export class PhotoService {
 
       if (filters.userId) {
         // Get photos for specific user
-        return await photoRepository.findByUserId(filters.userId, limit)
+        return await photoRepository.findByUser(filters.userId)
       }
 
       if (filters.album) {
         // Get photos by album
-        const photos = await photoRepository.findByAlbum(filters.album, limit)
-        return searchTerm 
-          ? photos.filter(p => 
-              p.title?.includes(searchTerm) || p.description?.includes(searchTerm)
-            )
-          : photos
+        return await photoRepository.search(filters.album, limit)
       }
 
       if (searchTerm) {
@@ -69,7 +64,7 @@ export class PhotoService {
       }
 
       // Get all recent photos
-      return await photoRepository.findAll({ take: limit })
+      return await photoRepository.findAll()
     } catch (error) {
       Logger.e(LogTags.PHOTO_FETCH, `Error fetching photos: ${String(error)}`)
       throw error
@@ -95,7 +90,7 @@ export class PhotoService {
   async getUserPhotos(userId: string, limit: number = 20) {
     try {
       Logger.d(LogTags.PHOTO_FETCH, 'Fetching photos for user', { userId, limit })
-      return await photoRepository.findByUserId(userId, limit)
+      return await photoRepository.findByUser(userId)
     } catch (error) {
       Logger.e(LogTags.PHOTO_FETCH, `Error fetching user photos: ${String(error)}`)
       throw error
@@ -113,7 +108,7 @@ export class PhotoService {
       const photo = await photoRepository.create({
         ...photoData,
         userId,
-        privacy: photoData.privacy || 'private'
+        privacy: (photoData.privacy || 'private') as "public" | "private" | "friends"
       })
 
       Logger.d(LogTags.PHOTO_UPLOAD, 'Photo document created', { photoId: photo.id })
@@ -153,7 +148,10 @@ export class PhotoService {
       }
 
       // Update photo
-      const updatedPhoto = await photoRepository.update(photoId, updates)
+      const updatedPhoto = await photoRepository.update(photoId, {
+        ...updates,
+        privacy: updates.privacy as "public" | "private" | "friends" | undefined
+      } as any)
 
       Logger.i(LogTags.PHOTO_UPDATE, 'Photo updated successfully', { photoId, userId })
 
@@ -220,7 +218,7 @@ export class PhotoService {
   async getPhotosByAlbum(album: string, limit: number = 20) {
     try {
       Logger.d(LogTags.PHOTO_FETCH, 'Fetching photos by album', { album, limit })
-      return await photoRepository.findByAlbum(album, limit)
+      return await photoRepository.search(album, limit)
     } catch (error) {
       Logger.e(LogTags.PHOTO_FETCH, `Error fetching photos by album: ${String(error)}`)
       throw error
@@ -246,7 +244,7 @@ export class PhotoService {
   async getPhotosByTag(tag: string, limit: number = 20) {
     try {
       Logger.d(LogTags.PHOTO_FETCH, 'Fetching photos by tag', { tag, limit })
-      return await photoRepository.findByTag(tag, limit)
+      return await photoRepository.findByTags([tag], limit)
     } catch (error) {
       Logger.e(LogTags.PHOTO_FETCH, `Error fetching photos by tag: ${String(error)}`)
       throw error

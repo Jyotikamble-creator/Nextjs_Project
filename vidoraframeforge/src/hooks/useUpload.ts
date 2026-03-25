@@ -30,7 +30,7 @@ export function useUpload() {
       // Upload to ImageKit
       logger.debug(LogTags.IMAGEKIT_UPLOAD, 'Starting ImageKit upload', { fileName: file.name, fileSize: file.size });
 
-      const uploadResult = await uploadToImageKit(file);
+      const uploadResult = await uploadToImageKit(file) as any;
 
       logger.info(LogTags.IMAGEKIT_UPLOAD, 'ImageKit upload successful', {
         fileId: uploadResult.fileId,

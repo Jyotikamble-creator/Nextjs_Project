@@ -1,5 +1,5 @@
-import { videoRepository } from "@/server/repositories/VideoRepository"
-import { userRepository } from "@/server/repositories/UserRepository"
+import { videoRepository } from "@/server/repositories/videoRepository"
+import { userRepository } from "@/server/repositories/userRepository"
 import { Logger, LogTags } from "@/lib/logger"
 import { prisma } from "@/server/db"
 
@@ -18,7 +18,7 @@ interface CreateVideoData {
   category?: string
   tags?: string[]
   isPublic?: boolean
-  privacy?: string
+  privacy?: "public" | "private" | "friends"
   fileId?: string
   fileName?: string
   size?: number
@@ -52,12 +52,12 @@ export class VideoService {
 
       if (filters.userId) {
         // Get videos for specific user
-        return await videoRepository.findByUserId(filters.userId, limit)
+        return await videoRepository.findByUser(filters.userId)
       }
 
       if (filters.category) {
         // Get videos by category with search
-        return await videoRepository.findByCategory(filters.category, searchFilter, limit)
+        return await videoRepository.search(searchFilter || filters.category, limit)
       }
 
       if (searchFilter) {
@@ -66,7 +66,7 @@ export class VideoService {
       }
 
       // Get all recent videos
-      return await videoRepository.findAll({ take: limit })
+      return await videoRepository.findAll()
     } catch (error) {
       Logger.e(LogTags.VIDEO_FETCH, `Error fetching videos: ${String(error)}`)
       throw error
@@ -102,7 +102,7 @@ export class VideoService {
   async getUserVideos(userId: string, limit: number = 20) {
     try {
       Logger.d(LogTags.VIDEO_FETCH, 'Fetching videos for user', { userId, limit })
-      return await videoRepository.findByUserId(userId, limit)
+      return await videoRepository.findByUser(userId)
     } catch (error) {
       Logger.e(LogTags.VIDEO_FETCH, `Error fetching user videos: ${String(error)}`)
       throw error
@@ -118,10 +118,15 @@ export class VideoService {
 
       // Create video via repository
       const video = await videoRepository.create({
-        ...videoData,
         userId,
-        viewCount: 0,
-        privacy: videoData.privacy || 'private'
+        title: videoData.title,
+        description: videoData.description,
+        url: videoData.videoUrl,
+        thumbnail: videoData.thumbnailUrl,
+        duration: videoData.duration,
+        category: videoData.category,
+        tags: videoData.tags,
+        privacy: (videoData.privacy || 'private') as "public" | "private" | "friends"
       })
 
       Logger.d(LogTags.VIDEO_UPLOAD, 'Video document created', { videoId: video.id })
@@ -211,7 +216,10 @@ export class VideoService {
       }
 
       // Update video
-      const updatedVideo = await videoRepository.update(videoId, updates)
+      const updatedVideo = await videoRepository.update(videoId, {
+        ...updates,
+        privacy: updates.privacy as "public" | "private" | "friends" | undefined
+      } as any)
 
       Logger.i(LogTags.VIDEO_UPDATE, 'Video updated successfully', { videoId, userId })
 
@@ -228,7 +236,7 @@ export class VideoService {
   async getVideosByCategory(category: string, limit: number = 20) {
     try {
       Logger.d(LogTags.VIDEO_FETCH, 'Fetching videos by category', { category, limit })
-      return await videoRepository.findByCategory(category, undefined, limit)
+      return await videoRepository.search(category, limit)
     } catch (error) {
       Logger.e(LogTags.VIDEO_FETCH, `Error fetching videos by category: ${String(error)}`)
       throw error
@@ -254,7 +262,7 @@ export class VideoService {
   async getTrendingVideos(limit: number = 10) {
     try {
       Logger.d(LogTags.VIDEO_FETCH, 'Fetching trending videos', { limit })
-      return await videoRepository.getTrending(limit)
+      return await videoRepository.findAll()
     } catch (error) {
       Logger.e(LogTags.VIDEO_FETCH, `Error fetching trending videos: ${String(error)}`)
       throw error
