@@ -1,27 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectToDatabase } from "@/server/db"
-import Photo from "@/server/models/Photo"
-import User from "@/server/models/User"
+import { prisma } from "@/server/db"
+import { photoRepository } from "@/server/repositories/PhotoRepository"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, isValidVideoDescription, sanitizeString } from "@/lib/validation"
-import { 
-  buildSearchQuery, 
-  buildAlbumQuery, 
-  buildUserQuery, 
-  mergeQueries 
-} from "@/server/utils/queryHelpers"
-import { updateUserStats, USER_POPULATE_OPTIONS } from "@/server/utils/apiHelpers"
-import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.PHOTO_FETCH, 'Photo fetch request received');
 
   try {
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo fetch');
-
     const { searchParams } = new URL(request.url)
     const album = searchParams.get("album")
     const search = searchParams.get("search")
@@ -30,29 +18,42 @@ export async function GET(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_FETCH, 'Query parameters parsed', { album, hasSearch: !!search, userId, limit });
 
-    // Build query using helpers
-    const baseQuery: Record<string, unknown> = userId ? {} : { isPublic: true }
-    const albumQuery = buildAlbumQuery(album)
-    const searchQuery = search ? buildSearchQuery(search, ["title", "description"]) : {}
+    // Build filters for Prisma
+    const filters: any = {}
     
-    let userQuery = {}
     if (userId) {
-      try {
-        userQuery = buildUserQuery(userId, "uploader")
-      } catch (error) {
-        Logger.w(LogTags.PHOTO_FETCH, 'Invalid userId format', { userId });
-        return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
-      }
+      filters.uploaderId = userId
+    } else {
+      filters.isPublic = true
     }
 
-    const query = mergeQueries(baseQuery, albumQuery, searchQuery, userQuery)
+    if (album) {
+      filters.album = album
+    }
 
-    // Optimized query
-    const photos = await Photo.find(query)
-      .populate("uploader", USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+    if (search) {
+      filters.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    // Fetch photos
+    const photos = await prisma.photo.findMany({
+      where: filters,
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            email: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    })
 
     Logger.i(LogTags.PHOTO_FETCH, `Photos fetched successfully: ${photos.length} photos returned`);
     return NextResponse.json(photos)
@@ -81,9 +82,6 @@ export async function POST(request: NextRequest) {
     }
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'User authenticated', { userId: session.user.id });
-
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo creation');
 
     const body = await request.json()
     const { title, description, photoUrl, thumbnailUrl, album, tags, isPublic, fileId, fileName, size, width, height, location, takenAt } = body
@@ -125,12 +123,13 @@ export async function POST(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'Input validation passed', { title: sanitizedTitle });
 
-    const photo = await Photo.create({
+    // Create photo using repository
+    const photo = await photoRepository.create({
       title: sanitizedTitle,
       description: sanitizedDescription,
       url: photoUrl,
       thumbnailUrl,
-      uploader: session.user.id,
+      uploaderId: session.user.id,
       album: sanitizedAlbum,
       tags: tags || [],
       location: sanitizedLocation,
@@ -143,15 +142,29 @@ export async function POST(request: NextRequest) {
       height,
     })
 
-    // Update user stats using helper
-    await updateUserStats(session.user.id, { totalPhotos: 1 });
+    // Update user stats
+    await prisma.userStats.update({
+      where: { userId: session.user.id },
+      data: { photosUploaded: { increment: 1 } }
+    })
 
-    const populatedPhoto = await Photo.findById(photo._id)
-      .populate("uploader", USER_POPULATE_OPTIONS)
-      .lean()
+    // Fetch with uploader
+    const populatedPhoto = await prisma.photo.findUnique({
+      where: { id: photo.id },
+      include: {
+        uploader: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            email: true
+          }
+        }
+      }
+    })
 
     Logger.i(LogTags.PHOTO_UPLOAD, 'Photo created successfully', {
-      photoId: photo._id.toString(),
+      photoId: photo.id,
       userId: session.user.id,
       title: sanitizedTitle
     });
@@ -188,9 +201,6 @@ export async function PUT(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'User authenticated', { userId: session.user.id });
 
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo update');
-
     const { searchParams } = new URL(request.url)
     const photoId = searchParams.get("id")
 
@@ -210,17 +220,17 @@ export async function PUT(request: NextRequest) {
     });
 
     // Find the photo and check ownership
-    const existingPhoto = await Photo.findById(photoId)
+    const existingPhoto = await photoRepository.findById(photoId)
     if (!existingPhoto) {
       Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: photo not found', { photoId });
       return NextResponse.json({ error: "Photo not found" }, { status: 404 })
     }
 
-    if (existingPhoto.uploader.toString() !== session.user.id) {
+    if (existingPhoto.uploaderId !== session.user.id) {
       Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: unauthorized access', {
         photoId,
         userId: session.user.id,
-        uploaderId: existingPhoto.uploader.toString()
+        uploaderId: existingPhoto.uploaderId
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
@@ -244,11 +254,8 @@ export async function PUT(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'Update data prepared', { photoId });
 
-    const updatedPhoto = await Photo.findByIdAndUpdate(
-      photoId,
-      updateData,
-      { new: true }
-    ).populate("uploader", "name avatar")
+    // Update photo using repository
+    const updatedPhoto = await photoRepository.update(photoId, updateData)
 
     Logger.i(LogTags.PHOTO_UPLOAD, 'Photo updated successfully', {
       photoId,
@@ -288,9 +295,6 @@ export async function DELETE(request: NextRequest) {
 
     Logger.d(LogTags.PHOTO_DELETE, 'User authenticated', { userId: session.user.id });
 
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for photo deletion');
-
     const { searchParams } = new URL(request.url)
     const photoId = searchParams.get("id")
 
@@ -302,25 +306,29 @@ export async function DELETE(request: NextRequest) {
     Logger.d(LogTags.PHOTO_DELETE, 'Deletion request parsed', { photoId });
 
     // Find the photo and check ownership
-    const existingPhoto = await Photo.findById(photoId)
+    const existingPhoto = await photoRepository.findById(photoId)
     if (!existingPhoto) {
       Logger.w(LogTags.PHOTO_DELETE, 'Photo deletion failed: photo not found', { photoId });
       return NextResponse.json({ error: "Photo not found" }, { status: 404 })
     }
 
-    if (existingPhoto.uploader.toString() !== session.user.id) {
+    if (existingPhoto.uploaderId !== session.user.id) {
       Logger.w(LogTags.PHOTO_DELETE, 'Photo deletion failed: unauthorized access', {
         photoId,
         userId: session.user.id,
-        uploaderId: existingPhoto.uploader.toString()
+        uploaderId: existingPhoto.uploaderId
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    await Photo.findByIdAndDelete(photoId)
+    // Delete photo using repository
+    await photoRepository.delete(photoId)
 
-    // Update user stats using helper
-    await updateUserStats(session.user.id, { totalPhotos: -1 });
+    // Update user stats
+    await prisma.userStats.update({
+      where: { userId: session.user.id },
+      data: { photosUploaded: { increment: -1 } }
+    })
 
     Logger.i(LogTags.PHOTO_DELETE, 'Photo deleted successfully', {
       photoId,

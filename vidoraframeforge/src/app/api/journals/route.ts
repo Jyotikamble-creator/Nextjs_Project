@@ -317,9 +317,6 @@ export async function DELETE(request: NextRequest) {
 
     Logger.d(LogTags.JOURNAL_DELETE, 'User authenticated', { userId: session.user.id });
 
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal deletion');
-
     const { searchParams } = new URL(request.url)
     const journalId = searchParams.get("id")
 
@@ -331,7 +328,7 @@ export async function DELETE(request: NextRequest) {
     Logger.d(LogTags.JOURNAL_DELETE, 'Deletion request parsed', { journalId });
 
     // Find the journal and check ownership
-    const existingJournal = await Journal.findById(journalId)
+    const existingJournal = await journalRepository.findById(journalId)
     if (!existingJournal) {
       Logger.w(LogTags.JOURNAL_DELETE, 'Journal deletion failed: journal not found', { journalId });
       return NextResponse.json({ error: "Journal not found" }, { status: 404 })
