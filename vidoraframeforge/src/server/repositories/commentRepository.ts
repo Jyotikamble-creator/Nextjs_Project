@@ -1,28 +1,38 @@
-import Comment from "@/server/models/Comment"
+import { prisma } from "@/server/db"
+import { Comment, Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
-import mongoose from "mongoose"
 
 export interface CommentFilters {
-  author?: string | mongoose.Types.ObjectId
+  userId?: string
   contentType?: "video" | "photo" | "journal"
-  contentId?: string | mongoose.Types.ObjectId
-  parentComment?: string | mongoose.Types.ObjectId | null
+  contentId?: string
+  parentCommentId?: string | null
 }
 
-export const COMMENT_POPULATE_OPTIONS = "name email avatar"
+export const COMMENT_POPULATE_OPTIONS = {
+  user: {
+    select: {
+      username: true,
+      email: true,
+      avatar: true
+    }
+  }
+}
 
 export class CommentRepository {
   /**
    * Find comment by ID
    */
-  async findById(commentId: string | mongoose.Types.ObjectId, populate = true) {
-    const query = Comment.findById(commentId)
-    
-    if (populate) {
-      query.populate("author", COMMENT_POPULATE_OPTIONS)
+  async findById(commentId: string, populate = true) {
+    try {
+      return await prisma.comment.findUnique({
+        where: { id: commentId },
+        include: populate ? COMMENT_POPULATE_OPTIONS : undefined
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding comment by ID: ${String(error)}`)
+      throw error
     }
-    
-    return query.lean()
   }
 
   /**
@@ -30,172 +40,188 @@ export class CommentRepository {
    */
   async findByContent(
     contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId,
+    contentId: string,
     limit = 50,
     skip = 0
   ) {
-    return Comment.find({
-      contentType,
-      contentId,
-      parentComment: { $exists: false },
-    })
-      .populate("author", COMMENT_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+    try {
+      return await prisma.comment.findMany({
+        where: {
+          contentType,
+          contentId,
+          parentCommentId: null
+        },
+        include: COMMENT_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding comments by content: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find replies for a comment
    */
-  async findReplies(
-    parentCommentId: string | mongoose.Types.ObjectId,
-    limit = 50
-  ) {
-    return Comment.find({ parentComment: parentCommentId })
-      .populate("author", COMMENT_POPULATE_OPTIONS)
-      .sort({ createdAt: 1 })
-      .limit(limit)
-      .lean()
+  async findReplies(parentCommentId: string, limit = 50) {
+    try {
+      return await prisma.comment.findMany({
+        where: { parentCommentId },
+        include: COMMENT_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'asc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding comment replies: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find all comments by user
    */
-  async findByUser(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50,
-    skip = 0
-  ) {
-    return Comment.find({ author: userId })
-      .populate("author", COMMENT_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+  async findByUser(userId: string, limit = 50, skip = 0) {
+    try {
+      return await prisma.comment.findMany({
+        where: { userId },
+        include: COMMENT_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding comments by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find all comments with filters
    */
   async findAll(filters: CommentFilters = {}, limit = 50, skip = 0) {
-    const query: any = {}
+    try {
+      const where: Prisma.CommentWhereInput = {}
 
-    if (filters.author) {
-      query.author = filters.author
-    }
-
-    if (filters.contentType) {
-      query.contentType = filters.contentType
-    }
-
-    if (filters.contentId) {
-      query.contentId = filters.contentId
-    }
-
-    if (filters.parentComment !== undefined) {
-      if (filters.parentComment === null) {
-        query.parentComment = { $exists: false }
-      } else {
-        query.parentComment = filters.parentComment
+      if (filters.userId) {
+        where.userId = filters.userId
       }
-    }
 
-    return Comment.find(query)
-      .populate("author", COMMENT_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+      if (filters.contentType) {
+        where.contentType = filters.contentType
+      }
+
+      if (filters.contentId) {
+        where.contentId = filters.contentId
+      }
+
+      if (filters.parentCommentId !== undefined) {
+        where.parentCommentId = filters.parentCommentId
+      }
+
+      return await prisma.comment.findMany({
+        where,
+        include: COMMENT_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding all comments: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Create a comment
    */
   async create(commentData: {
-    author: string | mongoose.Types.ObjectId
+    userId: string
     contentType: "video" | "photo" | "journal"
-    contentId: string | mongoose.Types.ObjectId
+    contentId: string
     content: string
-    parentComment?: string | mongoose.Types.ObjectId
+    parentCommentId?: string
   }) {
-    const comment = await Comment.create(commentData)
-    Logger.i(LogTags.AUTH, `Comment created: ${comment._id}`, {
-      author: commentData.author,
-      contentType: commentData.contentType,
-      isReply: !!commentData.parentComment,
-    })
-    return comment.toObject()
+    try {
+      const comment = await prisma.comment.create({
+        data: commentData,
+        include: COMMENT_POPULATE_OPTIONS
+      })
+      Logger.i(LogTags.AUTH, `Comment created: ${comment.id}`, {
+        userId: commentData.userId,
+        contentType: commentData.contentType,
+        isReply: !!commentData.parentCommentId
+      })
+      return comment
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error creating comment: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Update comment
    */
-  async update(
-    commentId: string | mongoose.Types.ObjectId,
-    content: string
-  ) {
-    const comment = await Comment.findByIdAndUpdate(
-      commentId,
-      {
-        content,
-        isEdited: true,
-        updatedAt: new Date(),
-      },
-      { new: true }
-    )
-      .populate("author", COMMENT_POPULATE_OPTIONS)
-      .lean()
-
-    Logger.i(LogTags.AUTH, `Comment updated: ${commentId}`)
-    return comment
+  async update(commentId: string, content: string) {
+    try {
+      const comment = await prisma.comment.update({
+        where: { id: commentId },
+        data: { content },
+        include: COMMENT_POPULATE_OPTIONS
+      })
+      Logger.i(LogTags.AUTH, `Comment updated: ${commentId}`)
+      return comment
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error updating comment: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete comment by ID
    */
-  async delete(commentId: string | mongoose.Types.ObjectId) {
-    const result = await Comment.findByIdAndDelete(commentId)
-    if (result) {
+  async delete(commentId: string) {
+    try {
+      const result = await prisma.comment.delete({
+        where: { id: commentId }
+      })
       Logger.i(LogTags.AUTH, `Comment deleted: ${commentId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting comment: ${String(error)}`)
+      throw error
     }
-    return result
   }
 
   /**
    * Delete comment and all its replies
    */
-  async deleteWithReplies(commentId: string | mongoose.Types.ObjectId) {
-    // First delete all replies
-    const repliesResult = await Comment.deleteMany({ parentComment: commentId })
-    
-    // Then delete the parent comment
-    const commentResult = await Comment.findByIdAndDelete(commentId)
+  async deleteWithReplies(commentId: string) {
+    try {
+      // First delete all replies
+      const repliesResult = await prisma.comment.deleteMany({
+        where: { parentCommentId: commentId }
+      })
 
-    Logger.i(
-      LogTags.AUTH,
-      `Comment deleted with ${repliesResult.deletedCount} replies: ${commentId}`
-    )
+      // Then delete the parent comment
+      const commentResult = await prisma.comment.delete({
+        where: { id: commentId }
+      })
 
-    return {
-      comment: commentResult,
-      repliesDeleted: repliesResult.deletedCount,
+      Logger.i(
+        LogTags.AUTH,
+        `Comment deleted with ${repliesResult.count} replies: ${commentId}`
+      )
+
+      return {
+        comment: commentResult,
+        repliesDeleted: repliesResult.count
+      }
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting comment with replies: ${String(error)}`)
+      throw error
     }
-  }
-
-  /**
-   * Increment comment likes
-   */
-  async incrementLikes(
-    commentId: string | mongoose.Types.ObjectId,
-    amount = 1
-  ) {
-    return Comment.findByIdAndUpdate(
-      commentId,
-      { $inc: { likes: amount } },
-      { new: true }
-    ).lean()
   }
 
   /**
@@ -203,138 +229,146 @@ export class CommentRepository {
    */
   async countByContent(
     contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId,
+    contentId: string,
     includeReplies = true
   ): Promise<number> {
-    const query: any = { contentType, contentId }
-    
-    if (!includeReplies) {
-      query.parentComment = { $exists: false }
-    }
+    try {
+      const where: Prisma.CommentWhereInput = { contentType, contentId }
 
-    return Comment.countDocuments(query)
+      if (!includeReplies) {
+        where.parentCommentId = null
+      }
+
+      return await prisma.comment.count({ where })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting comments by content: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Count comments by user
    */
-  async countByUser(userId: string | mongoose.Types.ObjectId): Promise<number> {
-    return Comment.countDocuments({ author: userId })
+  async countByUser(userId: string): Promise<number> {
+    try {
+      return await prisma.comment.count({ where: { userId } })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting comments by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Count replies for comment
    */
-  async countReplies(parentCommentId: string | mongoose.Types.ObjectId): Promise<number> {
-    return Comment.countDocuments({ parentComment: parentCommentId })
+  async countReplies(parentCommentId: string): Promise<number> {
+    try {
+      return await prisma.comment.count({ where: { parentCommentId } })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting replies: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Check if user is comment owner
    */
-  async isOwner(
-    commentId: string | mongoose.Types.ObjectId,
-    userId: string | mongoose.Types.ObjectId
-  ): Promise<boolean> {
-    const comment = await Comment.findById(commentId).select("author").lean()
-    return comment?.author?.toString() === userId.toString()
+  async isOwner(commentId: string, userId: string): Promise<boolean> {
+    try {
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId },
+        select: { userId: true }
+      })
+      return comment?.userId === userId
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking comment ownership: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get recent comments (global)
    */
   async findRecent(limit = 20) {
-    return Comment.find({ parentComment: { $exists: false } })
-      .populate("author", COMMENT_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+    try {
+      return await prisma.comment.findMany({
+        where: { parentCommentId: null },
+        include: COMMENT_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding recent comments: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get user comment statistics
    */
-  async getUserStats(userId: string | mongoose.Types.ObjectId) {
-    const stats = await Comment.aggregate([
-      { $match: { author: new mongoose.Types.ObjectId(userId as string) } },
-      {
-        $group: {
-          _id: "$contentType",
-          count: { $sum: 1 },
-          totalLikes: { $sum: "$likes" },
-        },
-      },
-    ])
+  async getUserStats(userId: string) {
+    try {
+      const comments = await prisma.comment.groupBy({
+        by: ['contentType'],
+        where: { userId },
+        _count: true,
+        _sum: { likes: true }
+      })
 
-    const result = {
-      total: 0,
-      totalLikes: 0,
-      videos: 0,
-      photos: 0,
-      journals: 0,
+      const result = {
+        total: 0,
+        totalLikes: 0,
+        videos: 0,
+        photos: 0,
+        journals: 0
+      }
+
+      comments.forEach((stat) => {
+        result.total += stat._count
+        result.totalLikes += stat._sum.likes || 0
+        if (stat.contentType === "video") result.videos = stat._count
+        if (stat.contentType === "photo") result.photos = stat._count
+        if (stat.contentType === "journal") result.journals = stat._count
+      })
+
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user comment stats: ${String(error)}`)
+      throw error
     }
-
-    stats.forEach((stat) => {
-      result.total += stat.count
-      result.totalLikes += stat.totalLikes
-      if (stat._id === "video") result.videos = stat.count
-      if (stat._id === "photo") result.photos = stat.count
-      if (stat._id === "journal") result.journals = stat.count
-    })
-
-    return result
   }
 
   /**
    * Delete all comments for content (when content is deleted)
    */
-  async deleteByContent(
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId
-  ) {
-    const result = await Comment.deleteMany({ contentType, contentId })
-    Logger.i(
-      LogTags.AUTH,
-      `${result.deletedCount} comments deleted for ${contentType} ${contentId}`
-    )
-    return result
+  async deleteByContent(contentType: "video" | "photo" | "journal", contentId: string) {
+    try {
+      const result = await prisma.comment.deleteMany({
+        where: { contentType, contentId }
+      })
+      Logger.i(
+        LogTags.AUTH,
+        `${result.count} comments deleted for ${contentType} ${contentId}`
+      )
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting comments by content: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete all comments by user (when user is deleted)
    */
-  async deleteByUser(userId: string | mongoose.Types.ObjectId) {
-    const result = await Comment.deleteMany({ author: userId })
-    Logger.i(
-      LogTags.AUTH,
-      `${result.deletedCount} comments deleted for user ${userId}`
-    )
-    return result
-  }
-
-  /**
-   * Get top commented content
-   */
-  async getTopCommented(
-    contentType?: "video" | "photo" | "journal",
-    limit = 10
-  ) {
-    const matchStage: any = {}
-    if (contentType) {
-      matchStage.contentType = contentType
+  async deleteByUser(userId: string) {
+    try {
+      const result = await prisma.comment.deleteMany({ where: { userId } })
+      Logger.i(LogTags.AUTH, `${result.count} comments deleted for user ${userId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting comments by user: ${String(error)}`)
+      throw error
     }
-
-    return Comment.aggregate([
-      { $match: matchStage },
-      {
-        $group: {
-          _id: { contentType: "$contentType", contentId: "$contentId" },
-          count: { $sum: 1 },
-        },
-      },
-      { $sort: { count: -1 } },
-      { $limit: limit },
-    ])
   }
 
   /**
@@ -342,38 +376,48 @@ export class CommentRepository {
    */
   async findWithReplies(
     contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId,
+    contentId: string,
     limit = 50
   ) {
-    const rootComments = await this.findByContent(contentType, contentId, limit)
+    try {
+      const rootComments = await this.findByContent(contentType, contentId, limit)
 
-    // Fetch replies for each root comment
-    const commentsWithReplies = await Promise.all(
-      rootComments.map(async (comment: any) => {
-        const replies = await this.findReplies(comment._id)
-        return { ...comment, replies }
-      })
-    )
+      // Fetch replies for each root comment
+      const commentsWithReplies = await Promise.all(
+        rootComments.map(async (comment) => {
+          const replies = await this.findReplies(comment.id)
+          return { ...comment, replies }
+        })
+      )
 
-    return commentsWithReplies
+      return commentsWithReplies
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding comments with replies: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get comment thread (parent and all ancestors)
    */
-  async getThread(commentId: string | mongoose.Types.ObjectId) {
-    const comment = await this.findById(commentId)
-    if (!comment) return []
+  async getThread(commentId: string) {
+    try {
+      const comment = await this.findById(commentId, true)
+      if (!comment) return []
 
-    const thread = [comment]
+      const thread: Comment[] = [comment]
 
-    // If has parent, recursively get parent thread
-    if ((comment as any).parentComment) {
-      const parentThread = await this.getThread((comment as any).parentComment)
-      thread.unshift(...parentThread)
+      // If has parent, recursively get parent thread
+      if (comment.parentCommentId) {
+        const parentThread = await this.getThread(comment.parentCommentId)
+        thread.unshift(...parentThread)
+      }
+
+      return thread
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting comment thread: ${String(error)}`)
+      throw error
     }
-
-    return thread
   }
 }
 

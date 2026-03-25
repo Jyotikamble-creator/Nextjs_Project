@@ -1,70 +1,58 @@
-import mongoose from "mongoose"
+import { PrismaClient } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
 
-const MONGODB_URI = process.env.MONGODB_URI!
+const DATABASE_URL = process.env.DATABASE_URL
+export const DB_DISABLED = !DATABASE_URL
 
-if (!MONGODB_URI) {
-  Logger.e(LogTags.DB_CONNECT, 'MONGODB_URI environment variable is not defined');
-  throw new Error("Please define the MONGODB_URI environment variable")
+if (DB_DISABLED) {
+  Logger.w(LogTags.DB_CONNECT, "DATABASE_URL is not defined. PostgreSQL connection is temporarily disabled.")
 }
 
-// Extend global type for mongoose caching
+// Extend global type for Prisma caching
 declare global {
-  var mongoose: {
-    conn: mongoose.Connection | null
-    promise: Promise<mongoose.Connection> | null
+  var prisma: PrismaClient | undefined
+}
+
+let prisma: PrismaClient
+
+if (process.env.NODE_ENV === "production") {
+  prisma = new PrismaClient()
+} else {
+  if (!global.prisma) {
+    global.prisma = new PrismaClient()
   }
+  prisma = global.prisma
 }
 
-let cached = global.mongoose
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null }
-}
+export { prisma }
 
 export async function connectToDatabase() {
-  if (cached.conn) {
-    Logger.d(LogTags.DB_CONNECT, 'Using existing database connection');
-    return cached.conn
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    }
-
-    Logger.d(LogTags.DB_CONNECT, 'Creating new database connection promise');
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongooseInstance) => {
-      Logger.i(LogTags.DB_CONNECT, 'MongoDB Connected successfully');
-      return mongooseInstance.connection
-    })
+  if (DB_DISABLED) {
+    Logger.w(LogTags.DB_CONNECT, "Skipping database connection because DATABASE_URL is disabled")
+    return
   }
 
   try {
-    cached.conn = await cached.promise
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established and cached');
-  } catch (e) {
-    cached.promise = null
-    Logger.e(LogTags.DB_CONNECT, `MongoDB Connection Error: ${String(e)}`);
-    throw e
+    // Prisma connects automatically on first query, but we can ensure connection with $connect()
+    await prisma.$connect()
+    Logger.i(LogTags.DB_CONNECT, "PostgreSQL Connected successfully")
+  } catch (error) {
+    Logger.e(LogTags.DB_CONNECT, `PostgreSQL Connection Error: ${String(error)}`)
+    throw error
   }
-
-  return cached.conn
 }
 
 export async function disconnectFromDatabase() {
+  if (DB_DISABLED) {
+    Logger.d(LogTags.DB_CONNECT, "Skipping database disconnect because DATABASE_URL is disabled")
+    return
+  }
+
   try {
-    if (cached.conn) {
-      await mongoose.disconnect()
-      cached.conn = null
-      cached.promise = null
-      Logger.i(LogTags.DB_CONNECT, 'MongoDB Disconnected successfully');
-    }
+    await prisma.$disconnect()
+    Logger.i(LogTags.DB_CONNECT, "PostgreSQL Disconnected successfully")
   } catch (error) {
-    Logger.e(LogTags.DB_CONNECT, `Error disconnecting from MongoDB: ${String(error)}`);
+    Logger.e(LogTags.DB_CONNECT, `Error disconnecting from PostgreSQL: ${String(error)}`)
     throw error
   }
 }

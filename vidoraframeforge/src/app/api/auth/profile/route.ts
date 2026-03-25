@@ -1,11 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectToDatabase } from "@/server/db"
-import User from "@/server/models/User"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError, AuthenticationError } from "@/lib/logger"
 import { isValidEmail } from "@/lib/validation"
 import * as bcrypt from "bcryptjs"
+import { prisma } from "@/server/db"
 
 export async function PUT(request: NextRequest) {
   Logger.d(LogTags.USER_UPDATE, 'Profile update request received')
@@ -20,9 +19,6 @@ export async function PUT(request: NextRequest) {
 
     Logger.d(LogTags.USER_UPDATE, 'User authenticated', { userId: session.user.id })
 
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for profile update')
-
     const body = await request.json()
     const { name, email, avatar, currentPassword, newPassword } = body
 
@@ -34,7 +30,10 @@ export async function PUT(request: NextRequest) {
     })
 
     // Find the user
-    const user = await User.findById(session.user.id)
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id }
+    })
+
     if (!user) {
       Logger.w(LogTags.USER_UPDATE, 'Profile update failed: user not found', { userId: session.user.id })
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -61,9 +60,11 @@ export async function PUT(request: NextRequest) {
         errors.email = "Please enter a valid email"
       } else {
         // Check if email is already taken by another user
-        const existingUser = await User.findOne({
-          email: email.trim().toLowerCase(),
-          _id: { $ne: session.user.id }
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            email: email.trim().toLowerCase(),
+            NOT: { id: session.user.id }
+          }
         })
         if (existingUser) {
           errors.email = "Email is already taken"
@@ -77,7 +78,7 @@ export async function PUT(request: NextRequest) {
         errors.currentPassword = "Current password is required to change password"
       } else {
         // Verify current password
-        const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password)
+        const isCurrentPasswordValid = user.password ? await bcrypt.compare(currentPassword, user.password) : false
         if (!isCurrentPasswordValid) {
           errors.currentPassword = "Current password is incorrect"
         }
@@ -96,27 +97,32 @@ export async function PUT(request: NextRequest) {
 
     // Prepare update data
     const updateData: Record<string, any> = {}
-    if (name !== undefined) updateData.name = name.trim()
+    if (name !== undefined) updateData.firstName = name.trim()
     if (email !== undefined) updateData.email = email.trim().toLowerCase()
     if (avatar !== undefined) updateData.avatar = avatar.trim() || ""
     if (newPassword) {
       updateData.password = await bcrypt.hash(newPassword, 12)
     }
-    updateData.updatedAt = new Date()
 
     Logger.d(LogTags.USER_UPDATE, 'Update data prepared', {
-      hasName: 'name' in updateData,
+      hasName: 'firstName' in updateData,
       hasEmail: 'email' in updateData,
       hasAvatar: 'avatar' in updateData,
       hasPassword: 'password' in updateData
     })
 
     // Update user
-    const updatedUser = await User.findByIdAndUpdate(
-      session.user.id,
-      updateData,
-      { new: true }
-    ).select('-password') // Don't return password
+    const updatedUser = await prisma.user.update({
+      where: { id: session.user.id },
+      data: updateData,
+      select: {
+        id: true,
+        firstName: true,
+        email: true,
+        avatar: true,
+        role: true
+      }
+    })
 
     if (!updatedUser) {
       Logger.e(LogTags.USER_UPDATE, 'Profile update failed: user not found after update', { userId: session.user.id })
@@ -131,8 +137,8 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       message: "Profile updated successfully",
       user: {
-        id: updatedUser._id.toString(),
-        name: updatedUser.name,
+        id: updatedUser.id,
+        name: updatedUser.firstName,
         email: updatedUser.email,
         avatar: updatedUser.avatar,
         role: updatedUser.role

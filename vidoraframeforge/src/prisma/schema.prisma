@@ -1,0 +1,222 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+model User {
+  id                    String      @id @default(cuid())
+  email                 String      @unique
+  password              String?
+  username              String      @unique
+  firstName             String?
+  lastName              String?
+  bio                   String?
+  avatar                String?
+  coverImage            String?
+  location              String?
+  website               String?
+  dateOfBirth           DateTime?
+  role                  String      @default("user") // "user", "admin"
+  isEmailVerified       Boolean     @default(false)
+  twoFactorEnabled      Boolean     @default(false)
+  lastActive            DateTime    @updatedAt
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations
+  stats                 UserStats?
+  videos                Video[]
+  photos                Photo[]
+  journals              Journal[]
+  comments              Comment[]
+  likes                 Like[]
+  followers             Follow[]    @relation("following")
+  following             Follow[]    @relation("follower")
+
+  @@index([email])
+  @@index([username])
+  @@fulltext([username, firstName, lastName, bio])
+}
+
+model UserStats {
+  id                    String      @id @default(cuid())
+  userId                String      @unique
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalPhotos           Int         @default(0)
+  totalVideos           Int         @default(0)
+  totalJournals         Int         @default(0)
+  streak                Int         @default(0)
+  followerCount         Int         @default(0)
+  followingCount        Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  @@index([userId])
+}
+
+model Video {
+  id                    String      @id @default(cuid())
+  title                 String
+  description           String?
+  url                   String
+  thumbnail             String?
+  duration              Int?
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category              String?      // e.g., "entertainment", "educational"
+  tags                  String[]    @default([])
+  privacy               String      @default("public") // "public", "private", "friends"
+  viewCount             Int         @default(0)
+  transformationUrl     String?
+  width                 Int         @default(1920)
+  height                Int         @default(1080)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations
+  comments              Comment[]
+  likes                 Like[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([privacy])
+  @@index([createdAt])
+  @@fulltext([title, description, tags])
+}
+
+model Photo {
+  id                    String      @id @default(cuid())
+  title                 String?
+  description           String?
+  url                   String
+  altText               String?
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  album                 String?
+  tags                  String[]    @default([])
+  privacy               String      @default("public") // "public", "private", "friends"
+  width                 Int?
+  height                Int?
+  order                 Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations
+  comments              Comment[]
+  likes                 Like[]
+
+  @@index([userId])
+  @@index([album])
+  @@index([privacy])
+  @@index([createdAt])
+  @@fulltext([title, description, tags])
+}
+
+model Journal {
+  id                    String      @id @default(cuid())
+  title                 String
+  content               String
+  mood                  String?      // e.g., "happy", "sad", "neutral"
+  authorId              String
+  author                User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  privacy               String      @default("private") // "public", "private", "friends"
+  attachments           JournalAttachment[]
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations
+  comments              Comment[]
+  likes                 Like[]
+
+  @@index([authorId])
+  @@index([mood])
+  @@index([privacy])
+  @@index([createdAt])
+  @@fulltext([title, content])
+}
+
+model JournalAttachment {
+  id                    String      @id @default(cuid())
+  journalId             String
+  journal               Journal     @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  type                  String      // "photo" or "video"
+  url                   String
+  createdAt             DateTime    @default(now())
+
+  @@index([journalId])
+}
+
+model Comment {
+  id                    String      @id @default(cuid())
+  content               String
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Polymorphic content
+  contentType           String      // "video", "photo", "journal"
+  contentId             String      // ID of the video, photo, or journal
+  
+  // Nested comments support
+  parentCommentId       String?
+  parentComment         Comment?    @relation("replies", fields: [parentCommentId], references: [id], onDelete: Cascade)
+  replies               Comment[]   @relation("replies")
+  
+  likes                 Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  // Relations for direct content references
+  video                 Video?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  photo                 Photo?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  journal               Journal?    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([parentCommentId])
+  @@index([contentType, contentId])
+  @@index([createdAt])
+  @@fulltext([content])
+}
+
+model Like {
+  id                    String      @id @default(cuid())
+  userId                String
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Polymorphic content
+  contentType           String      // "video", "photo", "journal"
+  contentId             String      // ID of the video, photo, or journal
+  
+  createdAt             DateTime    @default(now())
+
+  // Relations for direct content references
+  video                 Video?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  photo                 Photo?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  journal               Journal?    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentType, contentId])
+  @@index([userId])
+  @@index([contentType, contentId])
+  @@index([createdAt])
+}
+
+model Follow {
+  id                    String      @id @default(cuid())
+  followerId            String
+  follower              User        @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId           String
+  following             User        @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  
+  createdAt             DateTime    @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}

@@ -1,9 +1,9 @@
-import Video from "@/server/models/Video"
+import { prisma } from "@/server/db"
+import { Video, Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
-import mongoose from "mongoose"
 
 export interface VideoFilters {
-  uploader?: string | mongoose.Types.ObjectId
+  userId?: string
   category?: string
   privacy?: "public" | "private" | "friends"
   tags?: string | string[]
@@ -12,358 +12,428 @@ export interface VideoFilters {
   endDate?: Date
 }
 
-export const VIDEO_POPULATE_OPTIONS = "name email avatar stats.followerCount"
+export const VIDEO_POPULATE_OPTIONS = {
+  user: {
+    select: {
+      username: true,
+      email: true,
+      avatar: true,
+      stats: {
+        select: {
+          followerCount: true
+        }
+      }
+    }
+  }
+}
 
 export class VideoRepository {
   /**
    * Find video by ID
    */
-  async findById(videoId: string | mongoose.Types.ObjectId, populate = true) {
-    const query = Video.findById(videoId)
-    
-    if (populate) {
-      query.populate("uploader", VIDEO_POPULATE_OPTIONS)
+  async findById(videoId: string, populate = true) {
+    try {
+      return await prisma.video.findUnique({
+        where: { id: videoId },
+        include: populate ? VIDEO_POPULATE_OPTIONS : undefined
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding video by ID: ${String(error)}`)
+      throw error
     }
-    
-    return query.lean()
   }
 
   /**
    * Find videos by user ID
    */
-  async findByUser(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50,
-    skip = 0
-  ) {
-    return Video.find({ uploader: userId })
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+  async findByUser(userId: string, limit = 50, skip = 0) {
+    try {
+      return await prisma.video.findMany({
+        where: { userId },
+        include: VIDEO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding videos by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find all videos with filters
    */
   async findAll(filters: VideoFilters = {}, limit = 50, skip = 0) {
-    const query: any = {}
+    try {
+      const where: Prisma.VideoWhereInput = {}
 
-    // User filter
-    if (filters.uploader) {
-      query.uploader = filters.uploader
-    }
+      if (filters.userId) {
+        where.userId = filters.userId
+      }
 
-    // Category filter
-    if (filters.category) {
-      query.category = filters.category
-    }
+      if (filters.category) {
+        where.category = filters.category
+      }
 
-    // Privacy filter
-    if (filters.privacy) {
-      query.privacy = filters.privacy
-    } else {
-      // Default to public if not specified
-      query.privacy = "public"
-    }
-
-    // Tags filter
-    if (filters.tags) {
-      if (Array.isArray(filters.tags)) {
-        query.tags = { $in: filters.tags }
+      if (filters.privacy) {
+        where.privacy = filters.privacy
       } else {
-        query.tags = filters.tags
+        where.privacy = "public"
       }
-    }
 
-    // Search filter (title and description)
-    if (filters.search) {
-      query.$or = [
-        { title: { $regex: filters.search, $options: "i" } },
-        { description: { $regex: filters.search, $options: "i" } },
-        { tags: { $regex: filters.search, $options: "i" } },
-      ]
-    }
-
-    // Date range filter
-    if (filters.startDate || filters.endDate) {
-      query.createdAt = {}
-      if (filters.startDate) {
-        query.createdAt.$gte = filters.startDate
+      if (filters.tags) {
+        if (Array.isArray(filters.tags)) {
+          where.tags = { hasSome: filters.tags }
+        } else {
+          where.tags = { has: filters.tags }
+        }
       }
-      if (filters.endDate) {
-        query.createdAt.$lte = filters.endDate
-      }
-    }
 
-    return Video.find(query)
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+      if (filters.search) {
+        where.OR = [
+          { title: { contains: filters.search, mode: 'insensitive' } },
+          { description: { contains: filters.search, mode: 'insensitive' } }
+        ]
+      }
+
+      if (filters.startDate || filters.endDate) {
+        where.createdAt = {}
+        if (filters.startDate) {
+          where.createdAt.gte = filters.startDate
+        }
+        if (filters.endDate) {
+          where.createdAt.lte = filters.endDate
+        }
+      }
+
+      return await prisma.video.findMany({
+        where,
+        include: VIDEO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding all videos: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Search videos with text search
    */
   async search(searchTerm: string, limit = 50) {
-    return Video.find(
-      { $text: { $search: searchTerm }, privacy: "public" },
-      { score: { $meta: "textScore" } }
-    )
-      .sort({ score: { $meta: "textScore" } })
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .limit(limit)
-      .lean()
+    try {
+      return await prisma.video.findMany({
+        where: {
+          privacy: "public",
+          OR: [
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+            { tags: { hasSome: [searchTerm] } }
+          ]
+        },
+        include: VIDEO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error searching videos: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Create a new video
    */
   async create(videoData: {
-    uploader: string | mongoose.Types.ObjectId
+    userId: string
     title: string
     description?: string
-    videoUrl: string
-    thumbnailUrl?: string
-    fileId?: string
-    fileName?: string
-    size?: number
+    url: string
+    thumbnail?: string
     duration?: number
     category?: string
     tags?: string[]
     privacy?: "public" | "private" | "friends"
-    transformation?: any
+    transformationUrl?: string
+    width?: number
+    height?: number
   }) {
-    const video = await Video.create(videoData)
-    Logger.i(LogTags.VIDEO_UPLOAD, `Video created: ${video._id}`, {
-      title: video.title,
-      uploader: video.uploader,
-    })
-    return video.toObject()
+    try {
+      const video = await prisma.video.create({
+        data: videoData,
+        include: VIDEO_POPULATE_OPTIONS
+      })
+      Logger.i(LogTags.VIDEO_UPLOAD, `Video created: ${video.id}`, {
+        title: video.title,
+        userId: video.userId
+      })
+      return video
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error creating video: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Update video by ID
    */
   async update(
-    videoId: string | mongoose.Types.ObjectId,
+    videoId: string,
     updateData: Partial<{
       title: string
       description: string
       category: string
       tags: string[]
       privacy: "public" | "private" | "friends"
-      thumbnailUrl: string
+      thumbnail: string
     }>
   ) {
-    const video = await Video.findByIdAndUpdate(
-      videoId,
-      { ...updateData, updatedAt: new Date() },
-      { new: true }
-    )
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .lean()
-
-    Logger.i(LogTags.VIDEO_UPDATE, `Video updated: ${videoId}`)
-    return video
+    try {
+      const video = await prisma.video.update({
+        where: { id: videoId },
+        data: updateData,
+        include: VIDEO_POPULATE_OPTIONS
+      })
+      Logger.i(LogTags.VIDEO_UPDATE, `Video updated: ${videoId}`)
+      return video
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error updating video: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete video by ID
    */
-  async delete(videoId: string | mongoose.Types.ObjectId) {
-    const result = await Video.findByIdAndDelete(videoId)
-    if (result) {
+  async delete(videoId: string) {
+    try {
+      const result = await prisma.video.delete({
+        where: { id: videoId }
+      })
       Logger.i(LogTags.VIDEO_DELETE, `Video deleted: ${videoId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting video: ${String(error)}`)
+      throw error
     }
-    return result
   }
 
   /**
    * Increment video views
    */
-  async incrementViews(videoId: string | mongoose.Types.ObjectId) {
-    return Video.findByIdAndUpdate(
-      videoId,
-      { $inc: { views: 1 } },
-      { new: true }
-    ).lean()
-  }
-
-  /**
-   * Increment video likes
-   */
-  async incrementLikes(
-    videoId: string | mongoose.Types.ObjectId,
-    amount = 1
-  ) {
-    return Video.findByIdAndUpdate(
-      videoId,
-      { $inc: { likes: amount } },
-      { new: true }
-    ).lean()
-  }
-
-  /**
-   * Increment comment count
-   */
-  async incrementComments(
-    videoId: string | mongoose.Types.ObjectId,
-    amount = 1
-  ) {
-    return Video.findByIdAndUpdate(
-      videoId,
-      { $inc: { commentCount: amount } },
-      { new: true }
-    ).lean()
+  async incrementViews(videoId: string) {
+    try {
+      return await prisma.video.update({
+        where: { id: videoId },
+        data: { viewCount: { increment: 1 } }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error incrementing views: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get videos by category
    */
   async findByCategory(category: string, limit = 50) {
-    return Video.find({ category, privacy: "public" })
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+    try {
+      return await prisma.video.findMany({
+        where: { category, privacy: "public" },
+        include: VIDEO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding videos by category: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get videos by tags
    */
   async findByTags(tags: string[], limit = 50) {
-    return Video.find({ tags: { $in: tags }, privacy: "public" })
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+    try {
+      return await prisma.video.findMany({
+        where: {
+          privacy: "public",
+          tags: { hasSome: tags }
+        },
+        include: VIDEO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding videos by tags: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get trending videos (most views recently)
    */
   async findTrending(limit = 20) {
-    const oneWeekAgo = new Date()
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    try {
+      const oneWeekAgo = new Date()
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
 
-    return Video.find({
-      privacy: "public",
-      createdAt: { $gte: oneWeekAgo },
-    })
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .sort({ views: -1, likes: -1 })
-      .limit(limit)
-      .lean()
+      return await prisma.video.findMany({
+        where: {
+          privacy: "public",
+          createdAt: { gte: oneWeekAgo }
+        },
+        include: VIDEO_POPULATE_OPTIONS,
+        orderBy: [{ viewCount: 'desc' }, { createdAt: 'desc' }],
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding trending videos: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get recommended videos (similar tags or category)
    */
-  async findRecommended(
-    videoId: string | mongoose.Types.ObjectId,
-    limit = 10
-  ) {
-    const currentVideo = await Video.findById(videoId).lean()
-    if (!currentVideo) return []
+  async findRecommended(videoId: string, limit = 10) {
+    try {
+      const currentVideo = await prisma.video.findUnique({
+        where: { id: videoId }
+      })
 
-    return Video.find({
-      _id: { $ne: videoId },
-      privacy: "public",
-      $or: [
-        { tags: { $in: currentVideo.tags || [] } },
-        { category: currentVideo.category },
-      ],
-    })
-      .populate("uploader", VIDEO_POPULATE_OPTIONS)
-      .sort({ views: -1, createdAt: -1 })
-      .limit(limit)
-      .lean()
+      if (!currentVideo) return []
+
+      return await prisma.video.findMany({
+        where: {
+          NOT: { id: videoId },
+          privacy: "public",
+          OR: [
+            { tags: { hasSome: currentVideo.tags } },
+            { category: currentVideo.category }
+          ]
+        },
+        include: VIDEO_POPULATE_OPTIONS,
+        orderBy: [{ viewCount: 'desc' }, { createdAt: 'desc' }],
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding recommended videos: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Count videos with filters
    */
   async count(filters: VideoFilters = {}): Promise<number> {
-    const query: any = {}
+    try {
+      const where: Prisma.VideoWhereInput = {}
 
-    if (filters.uploader) {
-      query.uploader = filters.uploader
+      if (filters.userId) {
+        where.userId = filters.userId
+      }
+
+      if (filters.category) {
+        where.category = filters.category
+      }
+
+      if (filters.privacy) {
+        where.privacy = filters.privacy
+      }
+
+      if (filters.tags) {
+        where.tags = Array.isArray(filters.tags)
+          ? { hasSome: filters.tags }
+          : { has: filters.tags }
+      }
+
+      return await prisma.video.count({ where })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting videos: ${String(error)}`)
+      throw error
     }
-
-    if (filters.category) {
-      query.category = filters.category
-    }
-
-    if (filters.privacy) {
-      query.privacy = filters.privacy
-    }
-
-    if (filters.tags) {
-      query.tags = Array.isArray(filters.tags)
-        ? { $in: filters.tags }
-        : filters.tags
-    }
-
-    return Video.countDocuments(query)
   }
 
   /**
    * Check if video exists and user is owner
    */
-  async isOwner(
-    videoId: string | mongoose.Types.ObjectId,
-    userId: string | mongoose.Types.ObjectId
-  ): Promise<boolean> {
-    const video = await Video.findById(videoId).select("uploader").lean()
-    return video?.uploader?.toString() === userId.toString()
+  async isOwner(videoId: string, userId: string): Promise<boolean> {
+    try {
+      const video = await prisma.video.findUnique({
+        where: { id: videoId },
+        select: { userId: true }
+      })
+      return video?.userId === userId
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking video ownership: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get unique categories
    */
   async getCategories(): Promise<string[]> {
-    const categories = await Video.distinct("category", { privacy: "public" })
-    return categories.filter((c) => c) // Filter out null/undefined
+    try {
+      const categories = await prisma.video.findMany({
+        where: { privacy: "public" },
+        select: { category: true },
+        distinct: ['category']
+      })
+      return categories
+        .map(c => c.category)
+        .filter((c) => c) as string[]
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting categories: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get unique tags from user's videos
    */
-  async getUserTags(userId: string | mongoose.Types.ObjectId): Promise<string[]> {
-    const videos = await Video.find({ uploader: userId })
-      .select("tags")
-      .lean()
-    
-    const allTags = videos.flatMap((v) => v.tags || [])
-    return [...new Set(allTags)].sort()
+  async getUserTags(userId: string): Promise<string[]> {
+    try {
+      const videos = await prisma.video.findMany({
+        where: { userId },
+        select: { tags: true }
+      })
+
+      const allTags = videos.flatMap((v) => v.tags || [])
+      return [...new Set(allTags)].sort()
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user tags: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get video statistics for user
    */
-  async getUserStats(userId: string | mongoose.Types.ObjectId) {
-    const stats = await Video.aggregate([
-      { $match: { uploader: new mongoose.Types.ObjectId(userId as string) } },
-      {
-        $group: {
-          _id: null,
-          totalVideos: { $sum: 1 },
-          totalViews: { $sum: "$views" },
-          totalLikes: { $sum: "$likes" },
-          averageViews: { $avg: "$views" },
-        },
-      },
-    ])
+  async getUserStats(userId: string) {
+    try {
+      const videos = await prisma.video.findMany({
+        where: { userId },
+        select: { viewCount: true }
+      })
 
-    return stats[0] || {
-      totalVideos: 0,
-      totalViews: 0,
-      totalLikes: 0,
-      averageViews: 0,
+      const totalVideos = videos.length
+      const totalViews = videos.reduce((sum, v) => sum + v.viewCount, 0)
+      const averageViews = totalVideos > 0 ? totalViews / totalVideos : 0
+
+      return {
+        totalVideos,
+        totalViews,
+        totalLikes: 0, // Would need separate likes count query
+        averageViews
+      }
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user stats: ${String(error)}`)
+      throw error
     }
   }
 }

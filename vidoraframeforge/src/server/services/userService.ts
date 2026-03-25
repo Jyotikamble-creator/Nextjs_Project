@@ -1,13 +1,29 @@
-import User from "../models/User";
+import { userRepository } from "@/server/repositories/UserRepository"
+import { Logger, LogTags } from "@/lib/logger"
 
 export const findUserByEmail = async (email: string) => {
-  return await User.findOne({ email });
-};
+  try {
+    return await userRepository.findByEmail(email)
+  } catch (error) {
+    Logger.e(LogTags.DB_QUERY, `Error finding user by email: ${String(error)}`)
+    throw error
+  }
+}
 
 export const findUserById = async (userId: string) => {
-  return await User.findById(userId).select("-password");
-};
+  try {
+    return await userRepository.findById(userId)
+  } catch (error) {
+    Logger.e(LogTags.DB_QUERY, `Error finding user by ID: ${String(error)}`)
+    throw error
+  }
+}
 
 export const updateUser = async (userId: string, updates: object) => {
-  return await User.findByIdAndUpdate(userId, updates, { new: true }).select("-password");
-};
+  try {
+    return await userRepository.update(userId, updates)
+  } catch (error) {
+    Logger.e(LogTags.DB_QUERY, `Error updating user: ${String(error)}`)
+    throw error
+  }
+}

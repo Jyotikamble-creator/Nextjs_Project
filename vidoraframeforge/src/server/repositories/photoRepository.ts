@@ -1,343 +1,367 @@
-import Photo from "@/server/models/Photo"
+import { prisma } from "@/server/db"
+import { Photo, Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
-import mongoose from "mongoose"
 
 export interface PhotoFilters {
-  uploader?: string | mongoose.Types.ObjectId
+  userId?: string
   album?: string
   tags?: string | string[]
   search?: string
   startDate?: Date
   endDate?: Date
-  privacy?: boolean
+  privacy?: string
 }
 
-export const PHOTO_POPULATE_OPTIONS = "name email avatar"
+export const PHOTO_POPULATE_OPTIONS = {
+  user: {
+    select: {
+      username: true,
+      email: true,
+      avatar: true
+    }
+  }
+}
 
 export class PhotoRepository {
   /**
    * Find photo by ID
    */
-  async findById(photoId: string | mongoose.Types.ObjectId, populate = true) {
-    const query = Photo.findById(photoId)
-    
-    if (populate) {
-      query.populate("uploader", PHOTO_POPULATE_OPTIONS)
+  async findById(photoId: string, populate = true) {
+    try {
+      return await prisma.photo.findUnique({
+        where: { id: photoId },
+        include: populate ? PHOTO_POPULATE_OPTIONS : undefined
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding photo by ID: ${String(error)}`)
+      throw error
     }
-    
-    return query.lean()
   }
 
   /**
    * Find photos by user ID
    */
-  async findByUser(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50,
-    skip = 0
-  ) {
-    return Photo.find({ uploader: userId })
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+  async findByUser(userId: string, limit = 50, skip = 0) {
+    try {
+      return await prisma.photo.findMany({
+        where: { userId },
+        include: PHOTO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding photos by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find all photos with filters
    */
   async findAll(filters: PhotoFilters = {}, limit = 50, skip = 0) {
-    const query: any = {}
+    try {
+      const where: Prisma.PhotoWhereInput = {}
 
-    // User filter
-    if (filters.uploader) {
-      query.uploader = filters.uploader
-    }
+      if (filters.userId) {
+        where.userId = filters.userId
+      }
 
-    // Album filter
-    if (filters.album) {
-      query.album = filters.album
-    }
+      if (filters.album) {
+        where.album = filters.album
+      }
 
-    // Privacy filter
-    if (filters.privacy !== undefined) {
-      query.isPublic = filters.privacy
-    } else {
-      // Default to public
-      query.isPublic = true
-    }
-
-    // Tags filter
-    if (filters.tags) {
-      if (Array.isArray(filters.tags)) {
-        query.tags = { $in: filters.tags }
+      if (filters.privacy !== undefined) {
+        where.privacy = filters.privacy
       } else {
-        query.tags = filters.tags
+        where.privacy = "public"
       }
-    }
 
-    // Search filter (title and description)
-    if (filters.search) {
-      query.$or = [
-        { title: { $regex: filters.search, $options: "i" } },
-        { description: { $regex: filters.search, $options: "i" } },
-        { tags: { $regex: filters.search, $options: "i" } },
-      ]
-    }
-
-    // Date range filter
-    if (filters.startDate || filters.endDate) {
-      query.createdAt = {}
-      if (filters.startDate) {
-        query.createdAt.$gte = filters.startDate
+      if (filters.tags) {
+        if (Array.isArray(filters.tags)) {
+          where.tags = { hasSome: filters.tags }
+        } else {
+          where.tags = { has: filters.tags }
+        }
       }
-      if (filters.endDate) {
-        query.createdAt.$lte = filters.endDate
-      }
-    }
 
-    return Photo.find(query)
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+      if (filters.search) {
+        where.OR = [
+          { title: { contains: filters.search, mode: 'insensitive' } },
+          { description: { contains: filters.search, mode: 'insensitive' } }
+        ]
+      }
+
+      if (filters.startDate || filters.endDate) {
+        where.createdAt = {}
+        if (filters.startDate) {
+          where.createdAt.gte = filters.startDate
+        }
+        if (filters.endDate) {
+          where.createdAt.lte = filters.endDate
+        }
+      }
+
+      return await prisma.photo.findMany({
+        where,
+        include: PHOTO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding all photos: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Search photos with text search
    */
   async search(searchTerm: string, limit = 50) {
-    return Photo.find(
-      { $text: { $search: searchTerm }, isPublic: true },
-      { score: { $meta: "textScore" } }
-    )
-      .sort({ score: { $meta: "textScore" } })
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .limit(limit)
-      .lean()
+    try {
+      return await prisma.photo.findMany({
+        where: {
+          privacy: "public",
+          OR: [
+            { title: { contains: searchTerm, mode: 'insensitive' } },
+            { description: { contains: searchTerm, mode: 'insensitive' } },
+            { tags: { hasSome: [searchTerm] } }
+          ]
+        },
+        include: PHOTO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error searching photos: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Create a new photo
    */
   async create(photoData: {
-    uploader: string | mongoose.Types.ObjectId
+    userId: string
     title?: string
     description?: string
-    photoUrl: string
-    thumbnailUrl?: string
-    fileId?: string
-    fileName?: string
-    size?: number
+    url: string
+    altText?: string
+    tags?: string[]
+    album?: string
+    privacy?: "public" | "private" | "friends"
     width?: number
     height?: number
-    album?: string
-    tags?: string[]
-    location?: string
-    takenAt?: Date
-    isPublic?: boolean
   }) {
-    const photo = await Photo.create(photoData)
-    Logger.i(LogTags.PHOTO_UPLOAD, `Photo created: ${photo._id}`, {
-      title: photo.title,
-      uploader: photo.uploader,
-    })
-    return photo.toObject()
+    try {
+      const photo = await prisma.photo.create({
+        data: photoData,
+        include: PHOTO_POPULATE_OPTIONS
+      })
+      Logger.i(LogTags.PHOTO_UPLOAD, `Photo created: ${photo.id}`, {
+        title: photo.title,
+        userId: photo.userId
+      })
+      return photo
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error creating photo: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Update photo by ID
    */
   async update(
-    photoId: string | mongoose.Types.ObjectId,
+    photoId: string,
     updateData: Partial<{
       title: string
       description: string
       album: string
       tags: string[]
-      location: string
-      isPublic: boolean
+      privacy: "public" | "private" | "friends"
     }>
   ) {
-    const photo = await Photo.findByIdAndUpdate(
-      photoId,
-      { ...updateData, updatedAt: new Date() },
-      { new: true }
-    )
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .lean()
-
-    Logger.i(LogTags.PHOTO_UPDATE, `Photo updated: ${photoId}`)
-    return photo
+    try {
+      const photo = await prisma.photo.update({
+        where: { id: photoId },
+        data: updateData,
+        include: PHOTO_POPULATE_OPTIONS
+      })
+      Logger.i(LogTags.PHOTO_UPDATE, `Photo updated: ${photoId}`)
+      return photo
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error updating photo: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete photo by ID
    */
-  async delete(photoId: string | mongoose.Types.ObjectId) {
-    const result = await Photo.findByIdAndDelete(photoId)
-    if (result) {
+  async delete(photoId: string) {
+    try {
+      const result = await prisma.photo.delete({
+        where: { id: photoId }
+      })
       Logger.i(LogTags.PHOTO_DELETE, `Photo deleted: ${photoId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting photo: ${String(error)}`)
+      throw error
     }
-    return result
-  }
-
-  /**
-   * Increment photo likes
-   */
-  async incrementLikes(
-    photoId: string | mongoose.Types.ObjectId,
-    amount = 1
-  ) {
-    return Photo.findByIdAndUpdate(
-      photoId,
-      { $inc: { likes: amount } },
-      { new: true }
-    ).lean()
-  }
-
-  /**
-   * Increment comment count
-   */
-  async incrementComments(
-    photoId: string | mongoose.Types.ObjectId,
-    amount = 1
-  ) {
-    return Photo.findByIdAndUpdate(
-      photoId,
-      { $inc: { commentCount: amount } },
-      { new: true }
-    ).lean()
   }
 
   /**
    * Get photos by album
    */
-  async findByAlbum(
-    album: string,
-    userId?: string | mongoose.Types.ObjectId,
-    limit = 50
-  ) {
-    const query: any = { album }
-    
-    if (userId) {
-      query.uploader = userId
-    } else {
-      query.isPublic = true
-    }
+  async findByAlbum(album: string, userId?: string, limit = 50) {
+    try {
+      const where: Prisma.PhotoWhereInput = { album }
 
-    return Photo.find(query)
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+      if (userId) {
+        where.userId = userId
+      } else {
+        where.privacy = "public"
+      }
+
+      return await prisma.photo.findMany({
+        where,
+        include: PHOTO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding photos by album: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get photos by tags
    */
   async findByTags(tags: string[], limit = 50) {
-    return Photo.find({ tags: { $in: tags }, isPublic: true })
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
-  }
-
-  /**
-   * Get photos by location
-   */
-  async findByLocation(location: string, limit = 50) {
-    return Photo.find({
-      location: { $regex: location, $options: "i" },
-      isPublic: true,
-    })
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+    try {
+      return await prisma.photo.findMany({
+        where: {
+          privacy: "public",
+          tags: { hasSome: tags }
+        },
+        include: PHOTO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding photos by tags: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Count photos with filters
    */
   async count(filters: PhotoFilters = {}): Promise<number> {
-    const query: any = {}
+    try {
+      const where: Prisma.PhotoWhereInput = {}
 
-    if (filters.uploader) {
-      query.uploader = filters.uploader
+      if (filters.userId) {
+        where.userId = filters.userId
+      }
+
+      if (filters.album) {
+        where.album = filters.album
+      }
+
+      if (filters.tags) {
+        where.tags = Array.isArray(filters.tags)
+          ? { hasSome: filters.tags }
+          : { has: filters.tags }
+      }
+
+      if (filters.privacy !== undefined) {
+        where.privacy = filters.privacy
+      }
+
+      return await prisma.photo.count({ where })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting photos: ${String(error)}`)
+      throw error
     }
-
-    if (filters.album) {
-      query.album = filters.album
-    }
-
-    if (filters.tags) {
-      query.tags = Array.isArray(filters.tags)
-        ? { $in: filters.tags }
-        : filters.tags
-    }
-
-    if (filters.privacy !== undefined) {
-      query.isPublic = filters.privacy
-    }
-
-    return Photo.countDocuments(query)
   }
 
   /**
    * Check if photo exists and user is owner
    */
-  async isOwner(
-    photoId: string | mongoose.Types.ObjectId,
-    userId: string | mongoose.Types.ObjectId
-  ): Promise<boolean> {
-    const photo = await Photo.findById(photoId).select("uploader").lean()
-    return photo?.uploader?.toString() === userId.toString()
+  async isOwner(photoId: string, userId: string): Promise<boolean> {
+    try {
+      const photo = await prisma.photo.findUnique({
+        where: { id: photoId },
+        select: { userId: true }
+      })
+      return photo?.userId === userId
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking photo ownership: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get unique albums for user
    */
-  async getUserAlbums(userId: string | mongoose.Types.ObjectId): Promise<string[]> {
-    const albums = await Photo.distinct("album", { uploader: userId })
-    return albums.filter((a) => a) // Filter out null/undefined
+  async getUserAlbums(userId: string): Promise<string[]> {
+    try {
+      const albums = await prisma.photo.findMany({
+        where: { userId },
+        select: { album: true },
+        distinct: ['album']
+      })
+      return albums
+        .map(a => a.album)
+        .filter((a) => a) as string[]
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user albums: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get unique tags from user's photos
    */
-  async getUserTags(userId: string | mongoose.Types.ObjectId): Promise<string[]> {
-    const photos = await Photo.find({ uploader: userId })
-      .select("tags")
-      .lean()
-    
-    const allTags = photos.flatMap((p) => p.tags || [])
-    return [...new Set(allTags)].sort()
+  async getUserTags(userId: string): Promise<string[]> {
+    try {
+      const photos = await prisma.photo.findMany({
+        where: { userId },
+        select: { tags: true }
+      })
+
+      const allTags = photos.flatMap((p) => p.tags || [])
+      return [...new Set(allTags)].sort()
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user tags: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get photo statistics for user
    */
-  async getUserStats(userId: string | mongoose.Types.ObjectId) {
-    const stats = await Photo.aggregate([
-      { $match: { uploader: new mongoose.Types.ObjectId(userId as string) } },
-      {
-        $group: {
-          _id: null,
-          totalPhotos: { $sum: 1 },
-          totalLikes: { $sum: "$likes" },
-          totalSize: { $sum: "$size" },
-        },
-      },
-    ])
+  async getUserStats(userId: string) {
+    try {
+      const photos = await prisma.photo.findMany({
+        where: { userId }
+      })
 
-    return stats[0] || {
-      totalPhotos: 0,
-      totalLikes: 0,
-      totalSize: 0,
+      const totalPhotos = photos.length
+
+      return {
+        totalPhotos,
+        totalLikes: 0, // Would need separate likes count query
+        totalSize: 0
+      }
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user stats: ${String(error)}`)
+      throw error
     }
   }
 
@@ -345,44 +369,50 @@ export class PhotoRepository {
    * Get recent photos (global)
    */
   async findRecent(limit = 20) {
-    return Photo.find({ isPublic: true })
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
-  }
-
-  /**
-   * Get photos taken in a date range
-   */
-  async findByDateTaken(startDate: Date, endDate: Date, limit = 50) {
-    return Photo.find({
-      takenAt: { $gte: startDate, $lte: endDate },
-      isPublic: true,
-    })
-      .populate("uploader", PHOTO_POPULATE_OPTIONS)
-      .sort({ takenAt: -1 })
-      .limit(limit)
-      .lean()
+    try {
+      return await prisma.photo.findMany({
+        where: { privacy: "public" },
+        include: PHOTO_POPULATE_OPTIONS,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding recent photos: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get album count for user
    */
-  async getAlbumCount(userId: string | mongoose.Types.ObjectId): Promise<number> {
-    const albums = await this.getUserAlbums(userId)
-    return albums.length
+  async getAlbumCount(userId: string): Promise<number> {
+    try {
+      const albums = await this.getUserAlbums(userId)
+      return albums.length
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting album count: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get photos count by album for user
    */
-  async getPhotosPerAlbum(userId: string | mongoose.Types.ObjectId) {
-    return Photo.aggregate([
-      { $match: { uploader: new mongoose.Types.ObjectId(userId as string) } },
-      { $group: { _id: "$album", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ])
+  async getPhotosPerAlbum(userId: string) {
+    try {
+      const albums = await prisma.photo.groupBy({
+        by: ['album'],
+        where: { userId },
+        _count: true
+      })
+      return albums.map(a => ({
+        album: a.album,
+        count: a._count
+      }))
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting photos per album: ${String(error)}`)
+      throw error
+    }
   }
 }
 

@@ -1,6 +1,6 @@
-import User from "@/server/models/User"
+import { prisma } from "@/server/db"
+import { User, Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
-import mongoose from "mongoose"
 
 export interface UserFilters {
   email?: string
@@ -12,111 +12,171 @@ export class UserRepository {
   /**
    * Find user by ID
    */
-  async findById(userId: string | mongoose.Types.ObjectId) {
-    return User.findById(userId).lean()
+  async findById(userId: string) {
+    try {
+      return await prisma.user.findUnique({
+        where: { id: userId },
+        include: { stats: true },
+        omit: { password: true }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding user by ID: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find user by ID with password included (for authentication)
    */
-  async findByIdWithPassword(userId: string | mongoose.Types.ObjectId) {
-    return User.findById(userId).select("+password").lean()
+  async findByIdWithPassword(userId: string) {
+    try {
+      return await prisma.user.findUnique({
+        where: { id: userId },
+        include: { stats: true }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding user by ID with password: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find user by email
    */
   async findByEmail(email: string) {
-    return User.findOne({ email: email.toLowerCase().trim() }).lean()
+    try {
+      return await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+        include: { stats: true },
+        omit: { password: true }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding user by email: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find user by email with password (for authentication)
    */
   async findByEmailWithPassword(email: string) {
-    return User.findOne({ email: email.toLowerCase().trim() })
-      .select("+password")
-      .lean()
+    try {
+      return await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+        include: { stats: true }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding user by email with password: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find multiple users with filters
    */
   async findAll(filters: UserFilters = {}, limit = 50, skip = 0) {
-    const query: any = {}
+    try {
+      const where: Prisma.UserWhereInput = {}
 
-    if (filters.email) {
-      query.email = filters.email.toLowerCase().trim()
+      if (filters.email) {
+        where.email = filters.email.toLowerCase().trim()
+      }
+
+      if (filters.role) {
+        where.role = filters.role
+      }
+
+      if (filters.search) {
+        where.OR = [
+          { username: { contains: filters.search, mode: 'insensitive' } },
+          { firstName: { contains: filters.search, mode: 'insensitive' } },
+          { lastName: { contains: filters.search, mode: 'insensitive' } },
+          { email: { contains: filters.search, mode: 'insensitive' } }
+        ]
+      }
+
+      return await prisma.user.findMany({
+        where,
+        include: { stats: true },
+        omit: { password: true },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding all users: ${String(error)}`)
+      throw error
     }
-
-    if (filters.role) {
-      query.role = filters.role
-    }
-
-    if (filters.search) {
-      query.$or = [
-        { name: { $regex: filters.search, $options: "i" } },
-        { email: { $regex: filters.search, $options: "i" } },
-      ]
-    }
-
-    return User.find(query)
-      .select("-password")
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
   }
 
   /**
    * Create a new user
    */
   async create(userData: {
-    name: string
     email: string
-    password: string
+    password?: string
+    username: string
+    firstName?: string
+    lastName?: string
     role?: string
     avatar?: string
   }) {
-    const user = await User.create({
-      ...userData,
-      email: userData.email.toLowerCase().trim(),
-    })
-    Logger.i(LogTags.AUTH, `User created: ${user._id}`)
-    return user.toObject()
+    try {
+      const user = await prisma.user.create({
+        data: {
+          ...userData,
+          email: userData.email.toLowerCase().trim(),
+          stats: {
+            create: {}
+          }
+        },
+        include: { stats: true },
+        omit: { password: true }
+      })
+      Logger.i(LogTags.AUTH, `User created: ${user.id}`)
+      return user
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error creating user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Update user by ID
    */
   async update(
-    userId: string | mongoose.Types.ObjectId,
+    userId: string,
     updateData: Partial<{
-      name: string
       email: string
       password: string
-      avatar: string
+      username: string
+      firstName: string
+      lastName: string
       bio: string
+      avatar: string
       role: string
     }>
   ) {
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { ...updateData, updatedAt: new Date() },
-      { new: true }
-    )
-      .select("-password")
-      .lean()
-
-    Logger.i(LogTags.USER_UPDATE, `User updated: ${userId}`)
-    return user
+    try {
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+        include: { stats: true },
+        omit: { password: true }
+      })
+      Logger.i(LogTags.USER_UPDATE, `User updated: ${userId}`)
+      return user
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error updating user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Update user stats
    */
   async updateStats(
-    userId: string | mongoose.Types.ObjectId,
+    userId: string,
     statsUpdate: {
       totalPhotos?: number
       totalVideos?: number
@@ -126,111 +186,177 @@ export class UserRepository {
       followingCount?: number
     }
   ) {
-    const updateFields: any = {}
-    
-    Object.entries(statsUpdate).forEach(([key, value]) => {
-      updateFields[`stats.${key}`] = value
-    })
-
-    return User.findByIdAndUpdate(userId, updateFields, { new: true })
-      .select("-password")
-      .lean()
+    try {
+      return await prisma.user.update({
+        where: { id: userId },
+        data: {
+          stats: {
+            update: statsUpdate
+          }
+        },
+        include: { stats: true },
+        omit: { password: true }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error updating user stats: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Increment user stats
    */
   async incrementStats(
-    userId: string | mongoose.Types.ObjectId,
+    userId: string,
     field: "totalPhotos" | "totalVideos" | "totalJournals" | "followerCount" | "followingCount",
     amount = 1
   ) {
-    return User.findByIdAndUpdate(
-      userId,
-      { $inc: { [`stats.${field}`]: amount } },
-      { new: true }
-    )
-      .select("-password")
-      .lean()
+    try {
+      return await prisma.userStats.update({
+        where: { userId },
+        data: {
+          [field]: {
+            increment: amount
+          }
+        }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error incrementing user stats: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Update last active timestamp
    */
-  async updateLastActive(userId: string | mongoose.Types.ObjectId) {
-    return User.findByIdAndUpdate(
-      userId,
-      { "stats.lastActive": new Date() },
-      { new: true }
-    )
-      .select("-password")
-      .lean()
+  async updateLastActive(userId: string) {
+    try {
+      return await prisma.user.update({
+        where: { id: userId },
+        data: { lastActive: new Date() },
+        include: { stats: true },
+        omit: { password: true }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error updating lastActive: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete user by ID
    */
-  async delete(userId: string | mongoose.Types.ObjectId) {
-    const result = await User.findByIdAndDelete(userId)
-    if (result) {
+  async delete(userId: string) {
+    try {
+      const result = await prisma.user.delete({
+        where: { id: userId }
+      })
       Logger.i(LogTags.AUTH, `User deleted: ${userId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting user: ${String(error)}`)
+      throw error
     }
-    return result
   }
 
   /**
    * Check if user exists by email
    */
   async existsByEmail(email: string): Promise<boolean> {
-    const count = await User.countDocuments({
-      email: email.toLowerCase().trim(),
-    })
-    return count > 0
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() }
+      })
+      return !!user
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking if user exists by email: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Check if user exists by ID
    */
-  async existsById(userId: string | mongoose.Types.ObjectId): Promise<boolean> {
-    const count = await User.countDocuments({ _id: userId })
-    return count > 0
+  async existsById(userId: string): Promise<boolean> {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      })
+      return !!user
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking if user exists by ID: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Count total users
    */
   async count(filters: UserFilters = {}): Promise<number> {
-    const query: any = {}
+    try {
+      const where: Prisma.UserWhereInput = {}
 
-    if (filters.role) {
-      query.role = filters.role
+      if (filters.role) {
+        where.role = filters.role
+      }
+
+      if (filters.search) {
+        where.OR = [
+          { username: { contains: filters.search, mode: 'insensitive' } },
+          { email: { contains: filters.search, mode: 'insensitive' } }
+        ]
+      }
+
+      return await prisma.user.count({ where })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting users: ${String(error)}`)
+      throw error
     }
-
-    if (filters.search) {
-      query.$or = [
-        { name: { $regex: filters.search, $options: "i" } },
-        { email: { $regex: filters.search, $options: "i" } },
-      ]
-    }
-
-    return User.countDocuments(query)
   }
 
   /**
    * Get user statistics
    */
-  async getStats(userId: string | mongoose.Types.ObjectId) {
-    const user = await User.findById(userId).select("stats").lean()
-    return user?.stats || null
+  async getStats(userId: string) {
+    try {
+      const stats = await prisma.userStats.findUnique({
+        where: { userId }
+      })
+      return stats || null
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user stats: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find users by IDs (for populating multiple users)
    */
-  async findByIds(userIds: (string | mongoose.Types.ObjectId)[]) {
-    return User.find({ _id: { $in: userIds } })
-      .select("name email avatar stats.followerCount stats.followingCount")
-      .lean()
+  async findByIds(userIds: string[]) {
+    try {
+      return await prisma.user.findMany({
+        where: {
+          id: {
+            in: userIds
+          }
+        },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          avatar: true,
+          stats: {
+            select: {
+              followerCount: true,
+              followingCount: true
+            }
+          }
+        }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding users by IDs: ${String(error)}`)
+      throw error
+    }
   }
 }
 

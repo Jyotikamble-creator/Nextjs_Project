@@ -1,9 +1,8 @@
-import { connectToDatabase } from "@/server/db"
-import User from "@/server/models/User"
 import { type NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
+import { Logger, LogTags, categorizeError, ValidationError, DatabaseError, ConnectionError } from "@/lib/logger"
 import { isValidEmail, isValidPassword, sanitizeString } from "@/lib/validation"
+import { prisma } from "@/server/db"
 
 export async function POST(request: NextRequest) {
   Logger.d(LogTags.SIGNUP, 'Registration request received');
@@ -52,10 +51,11 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, 12)
     Logger.d(LogTags.SIGNUP, 'Password hashed successfully');
 
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for registration');
+    // Check for existing user
+    const existingUser = await prisma.user.findUnique({ 
+      where: { email: sanitizedEmail }
+    })
 
-    const existingUser = await User.findOne({ email: sanitizedEmail })
     if (existingUser) {
       // Check if existing user has a password
       if (existingUser.password) {
@@ -63,43 +63,53 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "User already registered" }, { status: 409 })
       } else {
         // User exists but has no password - update the existing record
-        Logger.i(LogTags.SIGNUP, 'Updating incomplete user record', { userId: existingUser._id.toString() });
+        Logger.i(LogTags.SIGNUP, 'Updating incomplete user record', { userId: existingUser.id });
         
         try {
-          existingUser.password = hashedPassword;
-          existingUser.name = sanitizedName;
-          await existingUser.save();
+          const updatedUser = await prisma.user.update({
+            where: { id: existingUser.id },
+            data: {
+              password: hashedPassword,
+              firstName: sanitizedName
+            }
+          })
           
-          Logger.i(LogTags.SIGNUP, 'Incomplete user record updated successfully', { userId: existingUser._id.toString(), email: Logger.maskEmail(sanitizedEmail) });
+          Logger.i(LogTags.SIGNUP, 'Incomplete user record updated successfully', { userId: updatedUser.id, email: Logger.maskEmail(sanitizedEmail) });
           
           return NextResponse.json(
             {
               message: "User successfully registered",
-              user: { id: existingUser._id, email: existingUser.email },
+              user: { id: updatedUser.id, email: updatedUser.email },
             },
             { status: 201 },
           )
         } catch (saveError) {
-          Logger.e(LogTags.SIGNUP, 'Failed to update incomplete user record', { error: saveError, userId: existingUser._id.toString() });
+          Logger.e(LogTags.SIGNUP, 'Failed to update incomplete user record', { error: saveError, userId: existingUser.id });
           throw saveError; // Re-throw to be caught by outer catch
         }
       }
     }
 
     // Create new user (only if no existing user found)
-    const newUser = await User.create({
-      name: sanitizedName,
-      email: sanitizedEmail,
-      password: hashedPassword,
+    const newUser = await prisma.user.create({
+      data: {
+        firstName: sanitizedName,
+        email: sanitizedEmail,
+        password: hashedPassword,
+        username: sanitizedEmail.split('@')[0],
+        stats: {
+          create: {}
+        }
+      }
     })
 
-    Logger.i(LogTags.SIGNUP, 'User registered successfully', { userId: newUser._id.toString(), email: Logger.maskEmail(sanitizedEmail) });
+    Logger.i(LogTags.SIGNUP, 'User registered successfully', { userId: newUser.id, email: Logger.maskEmail(sanitizedEmail) });
 
     // Return a success response with the user ID and email
     return NextResponse.json(
       {
         message: "User successfully registered",
-        user: { id: newUser._id, email: newUser.email },
+        user: { id: newUser.id, email: newUser.email },
       },
       { status: 201 },
     )
@@ -116,6 +126,14 @@ export async function POST(request: NextRequest) {
     if (categorizedError instanceof DatabaseError) {
       Logger.e(LogTags.DB_ERROR, `Database error in registration: ${categorizedError.message}`);
       return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
+    }
+
+    if (categorizedError instanceof ConnectionError) {
+      Logger.e(LogTags.DB_CONNECT, `Database unavailable in registration: ${categorizedError.message}`);
+      return NextResponse.json(
+        { error: "Database is unavailable. Check DATABASE_URL or start PostgreSQL and try again." },
+        { status: 503 }
+      );
     }
 
     Logger.e(LogTags.SIGNUP, `Unexpected error in registration: ${categorizedError.message}`, { error: categorizedError });

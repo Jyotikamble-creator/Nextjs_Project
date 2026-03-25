@@ -160,6 +160,19 @@ export function categorizeError(error: unknown): Error {
       return new SerializationError(`Error in parsing response: ${error.message}`, error);
     }
 
+    const message = error.message || '';
+
+    // MongoDB connectivity / server selection failures
+    if (
+      error.name === 'MongooseServerSelectionError' ||
+      error.name === 'MongoNetworkTimeoutError' ||
+      message.includes('ECONNREFUSED') ||
+      message.includes('Server selection timed out') ||
+      message.includes('MongoServerSelectionError')
+    ) {
+      return new ConnectionError(`Database connection failed: ${message}`);
+    }
+
     // Mongoose/MongoDB errors
     if (error.name === 'ValidationError' || error.message.includes('validation failed')) {
       return new ValidationError(`Validation error: ${error.message}`);
@@ -218,7 +231,11 @@ export function categorizeError(error: unknown): Error {
     }
   }
 
-  // Generic error
+  // Generic fallback that preserves useful message details when available
+  if (isError(error)) {
+    return new Error(error.message || 'Unexpected Error');
+  }
+
   return new Error('Unexpected Error');
 }
 

@@ -1,286 +1,365 @@
-import Like from "@/server/models/Like"
+import { prisma } from "@/server/db"
+import { Like, Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
-import mongoose from "mongoose"
 
 export interface LikeFilters {
-  user?: string | mongoose.Types.ObjectId
+  userId?: string
   contentType?: "video" | "photo" | "journal"
-  contentId?: string | mongoose.Types.ObjectId
+  contentId?: string
 }
 
 export class LikeRepository {
   /**
    * Find like by ID
    */
-  async findById(likeId: string | mongoose.Types.ObjectId) {
-    return Like.findById(likeId).lean()
+  async findById(likeId: string) {
+    try {
+      return await prisma.like.findUnique({
+        where: { id: likeId }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding like by ID: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find like by user and content
    */
-  async findOne(
-    userId: string | mongoose.Types.ObjectId,
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId
-  ) {
-    return Like.findOne({
-      user: userId,
-      contentType,
-      contentId,
-    }).lean()
+  async findOne(userId: string, contentType: "video" | "photo" | "journal", contentId: string) {
+    try {
+      return await prisma.like.findUnique({
+        where: {
+          userId_contentType_contentId: {
+            userId,
+            contentType,
+            contentId
+          }
+        }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding like: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Check if user has liked content
    */
-  async hasLiked(
-    userId: string | mongoose.Types.ObjectId,
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId
-  ): Promise<boolean> {
-    const like = await this.findOne(userId, contentType, contentId)
-    return !!like
+  async hasLiked(userId: string, contentType: "video" | "photo" | "journal", contentId: string): Promise<boolean> {
+    try {
+      const like = await this.findOne(userId, contentType, contentId)
+      return !!like
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking if user has liked: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find all likes for content
    */
-  async findByContent(
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId,
-    limit = 100
-  ) {
-    return Like.find({ contentType, contentId })
-      .populate("user", "name email avatar")
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+  async findByContent(contentType: "video" | "photo" | "journal", contentId: string, limit = 100) {
+    try {
+      return await prisma.like.findMany({
+        where: { contentType, contentId },
+        include: {
+          user: {
+            select: {
+              username: true,
+              email: true,
+              avatar: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding likes by content: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find all likes by user
    */
   async findByUser(
-    userId: string | mongoose.Types.ObjectId,
+    userId: string,
     contentType?: "video" | "photo" | "journal",
     limit = 100,
     skip = 0
   ) {
-    const query: any = { user: userId }
-    
-    if (contentType) {
-      query.contentType = contentType
-    }
+    try {
+      const where: Prisma.LikeWhereInput = { userId }
 
-    return Like.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+      if (contentType) {
+        where.contentType = contentType
+      }
+
+      return await prisma.like.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding likes by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Create a like
    */
   async create(likeData: {
-    user: string | mongoose.Types.ObjectId
+    userId: string
     contentType: "video" | "photo" | "journal"
-    contentId: string | mongoose.Types.ObjectId
+    contentId: string
   }) {
-    // Check if already liked
-    const existing = await this.findOne(
-      likeData.user,
-      likeData.contentType,
-      likeData.contentId
-    )
+    try {
+      // Check if already liked
+      const existing = await this.findOne(likeData.userId, likeData.contentType, likeData.contentId)
 
-    if (existing) {
-      Logger.w(LogTags.AUTH, "User already liked this content")
-      return null
+      if (existing) {
+        Logger.w(LogTags.AUTH, "User already liked this content")
+        return null
+      }
+
+      const like = await prisma.like.create({
+        data: likeData
+      })
+      Logger.i(LogTags.AUTH, `Like created: ${like.id}`, {
+        userId: likeData.userId,
+        contentType: likeData.contentType
+      })
+      return like
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error creating like: ${String(error)}`)
+      throw error
     }
-
-    const like = await Like.create(likeData)
-    Logger.i(LogTags.AUTH, `Like created: ${like._id}`, {
-      user: likeData.user,
-      contentType: likeData.contentType,
-    })
-    return like.toObject()
   }
 
   /**
    * Delete a like
    */
-  async delete(
-    userId: string | mongoose.Types.ObjectId,
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId
-  ) {
-    const result = await Like.findOneAndDelete({
-      user: userId,
-      contentType,
-      contentId,
-    })
+  async delete(userId: string, contentType: "video" | "photo" | "journal", contentId: string) {
+    try {
+      const result = await prisma.like.delete({
+        where: {
+          userId_contentType_contentId: {
+            userId,
+            contentType,
+            contentId
+          }
+        }
+      })
 
-    if (result) {
-      Logger.i(LogTags.AUTH, `Like deleted: ${result._id}`)
+      if (result) {
+        Logger.i(LogTags.AUTH, `Like deleted: ${result.id}`)
+      }
+
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting like: ${String(error)}`)
+      throw error
     }
-
-    return result
   }
 
   /**
    * Delete like by ID
    */
-  async deleteById(likeId: string | mongoose.Types.ObjectId) {
-    const result = await Like.findByIdAndDelete(likeId)
-    if (result) {
+  async deleteById(likeId: string) {
+    try {
+      const result = await prisma.like.delete({
+        where: { id: likeId }
+      })
       Logger.i(LogTags.AUTH, `Like deleted: ${likeId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting like by ID: ${String(error)}`)
+      throw error
     }
-    return result
   }
 
   /**
    * Count likes for content
    */
-  async countByContent(
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId
-  ): Promise<number> {
-    return Like.countDocuments({ contentType, contentId })
+  async countByContent(contentType: "video" | "photo" | "journal", contentId: string): Promise<number> {
+    try {
+      return await prisma.like.count({ where: { contentType, contentId } })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting likes by content: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Count likes by user
    */
-  async countByUser(
-    userId: string | mongoose.Types.ObjectId,
-    contentType?: "video" | "photo" | "journal"
-  ): Promise<number> {
-    const query: any = { user: userId }
-    
-    if (contentType) {
-      query.contentType = contentType
-    }
+  async countByUser(userId: string, contentType?: "video" | "photo" | "journal"): Promise<number> {
+    try {
+      const where: Prisma.LikeWhereInput = { userId }
 
-    return Like.countDocuments(query)
+      if (contentType) {
+        where.contentType = contentType
+      }
+
+      return await prisma.like.count({ where })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting likes by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get like statistics for user
    */
-  async getUserStats(userId: string | mongoose.Types.ObjectId) {
-    const stats = await Like.aggregate([
-      { $match: { user: new mongoose.Types.ObjectId(userId as string) } },
-      {
-        $group: {
-          _id: "$contentType",
-          count: { $sum: 1 },
-        },
-      },
-    ])
+  async getUserStats(userId: string) {
+    try {
+      const stats = await prisma.like.groupBy({
+        by: ['contentType'],
+        where: { userId },
+        _count: true
+      })
 
-    const result = {
-      total: 0,
-      videos: 0,
-      photos: 0,
-      journals: 0,
+      const result = {
+        total: 0,
+        videos: 0,
+        photos: 0,
+        journals: 0
+      }
+
+      stats.forEach((stat) => {
+        result.total += stat._count
+        if (stat.contentType === "video") result.videos = stat._count
+        if (stat.contentType === "photo") result.photos = stat._count
+        if (stat.contentType === "journal") result.journals = stat._count
+      })
+
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting user like stats: ${String(error)}`)
+      throw error
     }
-
-    stats.forEach((stat) => {
-      result.total += stat.count
-      if (stat._id === "video") result.videos = stat.count
-      if (stat._id === "photo") result.photos = stat.count
-      if (stat._id === "journal") result.journals = stat.count
-    })
-
-    return result
   }
 
   /**
-   * Get most liked content for user
+   * Get most liked content by user
    */
   async getMostLikedByUser(
-    userId: string | mongoose.Types.ObjectId,
+    userId: string,
     contentType?: "video" | "photo" | "journal",
     limit = 10
   ) {
-    const query: any = { user: userId }
-    
-    if (contentType) {
-      query.contentType = contentType
-    }
+    try {
+      const where: Prisma.LikeWhereInput = { userId }
 
-    return Like.find(query)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+      if (contentType) {
+        where.contentType = contentType
+      }
+
+      return await prisma.like.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting most liked by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete all likes for content (when content is deleted)
    */
-  async deleteByContent(
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId
-  ) {
-    const result = await Like.deleteMany({ contentType, contentId })
-    Logger.i(LogTags.AUTH, `${result.deletedCount} likes deleted for ${contentType} ${contentId}`)
-    return result
+  async deleteByContent(contentType: "video" | "photo" | "journal", contentId: string) {
+    try {
+      const result = await prisma.like.deleteMany({ where: { contentType, contentId } })
+      Logger.i(LogTags.AUTH, `${result.count} likes deleted for ${contentType} ${contentId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting likes by content: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete all likes by user (when user is deleted)
    */
-  async deleteByUser(userId: string | mongoose.Types.ObjectId) {
-    const result = await Like.deleteMany({ user: userId })
-    Logger.i(LogTags.AUTH, `${result.deletedCount} likes deleted for user ${userId}`)
-    return result
+  async deleteByUser(userId: string) {
+    try {
+      const result = await prisma.like.deleteMany({ where: { userId } })
+      Logger.i(LogTags.AUTH, `${result.count} likes deleted for user ${userId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting likes by user: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get users who liked content
    */
-  async getUsersWhoLiked(
-    contentType: "video" | "photo" | "journal",
-    contentId: string | mongoose.Types.ObjectId,
-    limit = 50
-  ) {
-    const likes = await Like.find({ contentType, contentId })
-      .populate("user", "name email avatar stats.followerCount")
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+  async getUsersWhoLiked(contentType: "video" | "photo" | "journal", contentId: string, limit = 50) {
+    try {
+      const likes = await prisma.like.findMany({
+        where: { contentType, contentId },
+        include: {
+          user: {
+            select: {
+              username: true,
+              email: true,
+              avatar: true,
+              stats: {
+                select: { followerCount: true }
+              }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
 
-    return likes.map((like: any) => like.user).filter((user) => user)
+      return likes.map((like) => like.user).filter((user) => user)
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting users who liked: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Bulk check if user liked multiple content items
    */
   async hasLikedMultiple(
-    userId: string | mongoose.Types.ObjectId,
+    userId: string,
     contentType: "video" | "photo" | "journal",
-    contentIds: (string | mongoose.Types.ObjectId)[]
+    contentIds: string[]
   ): Promise<{ [contentId: string]: boolean }> {
-    const likes = await Like.find({
-      user: userId,
-      contentType,
-      contentId: { $in: contentIds },
-    })
-      .select("contentId")
-      .lean()
+    try {
+      const likes = await prisma.like.findMany({
+        where: {
+          userId,
+          contentType,
+          contentId: { in: contentIds }
+        },
+        select: { contentId: true }
+      })
 
-    const result: { [contentId: string]: boolean } = {}
-    contentIds.forEach((id) => {
-      result[id.toString()] = false
-    })
+      const result: { [contentId: string]: boolean } = {}
+      contentIds.forEach((id) => {
+        result[id] = false
+      })
 
-    likes.forEach((like: any) => {
-      result[like.contentId.toString()] = true
-    })
+      likes.forEach((like) => {
+        result[like.contentId] = true
+      })
 
-    return result
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking multiple likes: ${String(error)}`)
+      throw error
+    }
   }
 }
 

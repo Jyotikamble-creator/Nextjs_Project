@@ -1,363 +1,458 @@
-import Follow from "@/server/models/Follow"
+import { prisma } from "@/server/db"
+import { Follow, Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
-import mongoose from "mongoose"
 
 export interface FollowFilters {
-  follower?: string | mongoose.Types.ObjectId
-  following?: string | mongoose.Types.ObjectId
+  followerId?: string
+  followingId?: string
 }
 
-export const FOLLOW_USER_POPULATE_OPTIONS =
-  "name email avatar bio stats.followerCount stats.followingCount"
+export const FOLLOW_USER_POPULATE_OPTIONS = {
+  select: {
+    username: true,
+    email: true,
+    avatar: true,
+    bio: true,
+    stats: {
+      select: {
+        followerCount: true,
+        followingCount: true
+      }
+    }
+  }
+}
 
 export class FollowRepository {
   /**
    * Find follow relationship by ID
    */
-  async findById(followId: string | mongoose.Types.ObjectId) {
-    return Follow.findById(followId).lean()
+  async findById(followId: string) {
+    try {
+      return await prisma.follow.findUnique({
+        where: { id: followId }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding follow by ID: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Find specific follow relationship
    */
-  async findOne(
-    followerId: string | mongoose.Types.ObjectId,
-    followingId: string | mongoose.Types.ObjectId
-  ) {
-    return Follow.findOne({
-      follower: followerId,
-      following: followingId,
-    }).lean()
+  async findOne(followerId: string, followingId: string) {
+    try {
+      return await prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId,
+            followingId
+          }
+        }
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding follow relationship: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Check if user A follows user B
    */
-  async isFollowing(
-    followerId: string | mongoose.Types.ObjectId,
-    followingId: string | mongoose.Types.ObjectId
-  ): Promise<boolean> {
-    const follow = await this.findOne(followerId, followingId)
-    return !!follow
+  async isFollowing(followerId: string, followingId: string): Promise<boolean> {
+    try {
+      const follow = await this.findOne(followerId, followingId)
+      return !!follow
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking if following: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Check if two users follow each other (mutual follow)
    */
-  async areMutualFollowers(
-    userId1: string | mongoose.Types.ObjectId,
-    userId2: string | mongoose.Types.ObjectId
-  ): Promise<boolean> {
-    const follow1 = await this.isFollowing(userId1, userId2)
-    const follow2 = await this.isFollowing(userId2, userId1)
-    return follow1 && follow2
+  async areMutualFollowers(userId1: string, userId2: string): Promise<boolean> {
+    try {
+      const follow1 = await this.isFollowing(userId1, userId2)
+      const follow2 = await this.isFollowing(userId2, userId1)
+      return follow1 && follow2
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking mutual followers: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get all followers for a user
    */
-  async findFollowers(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50,
-    skip = 0
-  ) {
-    return Follow.find({ following: userId })
-      .populate("follower", FOLLOW_USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+  async findFollowers(userId: string, limit = 50, skip = 0) {
+    try {
+      return await prisma.follow.findMany({
+        where: { followingId: userId },
+        include: { follower: { select: FOLLOW_USER_POPULATE_OPTIONS.select } },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding followers: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get all users that a user is following
    */
-  async findFollowing(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50,
-    skip = 0
-  ) {
-    return Follow.find({ follower: userId })
-      .populate("following", FOLLOW_USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .skip(skip)
-      .lean()
+  async findFollowing(userId: string, limit = 50, skip = 0) {
+    try {
+      return await prisma.follow.findMany({
+        where: { followerId: userId },
+        include: { following: { select: FOLLOW_USER_POPULATE_OPTIONS.select } },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error finding following: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get follower list (just user objects)
    */
-  async getFollowersList(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50
-  ) {
-    const follows = await this.findFollowers(userId, limit)
-    return follows.map((f: any) => f.follower).filter((u) => u)
+  async getFollowersList(userId: string, limit = 50) {
+    try {
+      const follows = await this.findFollowers(userId, limit)
+      return follows.map((f) => f.follower).filter((u) => u)
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting followers list: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get following list (just user objects)
    */
-  async getFollowingList(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50
-  ) {
-    const follows = await this.findFollowing(userId, limit)
-    return follows.map((f: any) => f.following).filter((u) => u)
+  async getFollowingList(userId: string, limit = 50) {
+    try {
+      const follows = await this.findFollowing(userId, limit)
+      return follows.map((f) => f.following).filter((u) => u)
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting following list: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Create a follow relationship
    */
-  async create(
-    followerId: string | mongoose.Types.ObjectId,
-    followingId: string | mongoose.Types.ObjectId
-  ) {
-    // Check if already following
-    const existing = await this.findOne(followerId, followingId)
-    if (existing) {
-      Logger.w(LogTags.AUTH, "User already following this user")
-      return null
+  async create(followerId: string, followingId: string) {
+    try {
+      // Check if already following
+      const existing = await this.findOne(followerId, followingId)
+      if (existing) {
+        Logger.w(LogTags.AUTH, "User already following this user")
+        return null
+      }
+
+      // Can't follow yourself
+      if (followerId === followingId) {
+        Logger.w(LogTags.AUTH, "User cannot follow themselves")
+        return null
+      }
+
+      const follow = await prisma.follow.create({
+        data: {
+          followerId,
+          followingId
+        }
+      })
+
+      Logger.i(LogTags.AUTH, `Follow created: ${follow.id}`, {
+        followerId,
+        followingId
+      })
+
+      return follow
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error creating follow: ${String(error)}`)
+      throw error
     }
-
-    // Can't follow yourself
-    if (followerId.toString() === followingId.toString()) {
-      Logger.w(LogTags.AUTH, "User cannot follow themselves")
-      return null
-    }
-
-    const follow = await Follow.create({
-      follower: followerId,
-      following: followingId,
-    })
-
-    Logger.i(LogTags.AUTH, `Follow created: ${follow._id}`, {
-      follower: followerId,
-      following: followingId,
-    })
-
-    return follow.toObject()
   }
 
   /**
    * Delete a follow relationship
    */
-  async delete(
-    followerId: string | mongoose.Types.ObjectId,
-    followingId: string | mongoose.Types.ObjectId
-  ) {
-    const result = await Follow.findOneAndDelete({
-      follower: followerId,
-      following: followingId,
-    })
+  async delete(followerId: string, followingId: string) {
+    try {
+      const result = await prisma.follow.delete({
+        where: {
+          followerId_followingId: {
+            followerId,
+            followingId
+          }
+        }
+      })
 
-    if (result) {
-      Logger.i(LogTags.AUTH, `Follow deleted: ${result._id}`)
+      if (result) {
+        Logger.i(LogTags.AUTH, `Follow deleted: ${result.id}`)
+      }
+
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting follow: ${String(error)}`)
+      throw error
     }
-
-    return result
   }
 
   /**
    * Delete follow by ID
    */
-  async deleteById(followId: string | mongoose.Types.ObjectId) {
-    const result = await Follow.findByIdAndDelete(followId)
-    if (result) {
+  async deleteById(followId: string) {
+    try {
+      const result = await prisma.follow.delete({
+        where: { id: followId }
+      })
       Logger.i(LogTags.AUTH, `Follow deleted: ${followId}`)
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting follow by ID: ${String(error)}`)
+      throw error
     }
-    return result
   }
 
   /**
    * Count followers for a user
    */
-  async countFollowers(userId: string | mongoose.Types.ObjectId): Promise<number> {
-    return Follow.countDocuments({ following: userId })
+  async countFollowers(userId: string): Promise<number> {
+    try {
+      return await prisma.follow.count({ where: { followingId: userId } })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting followers: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Count following for a user
    */
-  async countFollowing(userId: string | mongoose.Types.ObjectId): Promise<number> {
-    return Follow.countDocuments({ follower: userId })
+  async countFollowing(userId: string): Promise<number> {
+    try {
+      return await prisma.follow.count({ where: { followerId: userId } })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error counting following: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get follow statistics for user
    */
-  async getUserStats(userId: string | mongoose.Types.ObjectId) {
-    const [followerCount, followingCount] = await Promise.all([
-      this.countFollowers(userId),
-      this.countFollowing(userId),
-    ])
+  async getUserStats(userId: string) {
+    try {
+      const [followerCount, followingCount] = await Promise.all([
+        this.countFollowers(userId),
+        this.countFollowing(userId)
+      ])
 
-    return {
-      followerCount,
-      followingCount,
-      ratio: followingCount > 0 ? followerCount / followingCount : 0,
+      return {
+        followerCount,
+        followingCount,
+        ratio: followingCount > 0 ? followerCount / followingCount : 0
+      }
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting follow stats: ${String(error)}`)
+      throw error
     }
   }
 
   /**
    * Get mutual followers (users who follow each other with this user)
    */
-  async getMutualFollowers(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 50
-  ) {
-    // Get users this user follows
-    const following = await Follow.find({ follower: userId })
-      .select("following")
-      .lean()
-    const followingIds = following.map((f: any) => f.following)
+  async getMutualFollowers(userId: string, limit = 50) {
+    try {
+      // Get users this user follows
+      const following = await prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true }
+      })
+      const followingIds = following.map((f) => f.followingId)
 
-    // Get users who follow this user AND are in the following list
-    return Follow.find({
-      following: userId,
-      follower: { $in: followingIds },
-    })
-      .populate("follower", FOLLOW_USER_POPULATE_OPTIONS)
-      .limit(limit)
-      .lean()
+      // Get users who follow this user AND are in the following list
+      return await prisma.follow.findMany({
+        where: {
+          followingId: userId,
+          followerId: { in: followingIds }
+        },
+        include: { follower: { select: FOLLOW_USER_POPULATE_OPTIONS.select } },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting mutual followers: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get suggested users to follow (friends of friends)
    */
-  async getSuggestedFollows(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 10
-  ) {
-    // Get users this user follows
-    const following = await Follow.find({ follower: userId })
-      .select("following")
-      .lean()
-    const followingIds = following.map((f: any) => f.following.toString())
+  async getSuggestedFollows(userId: string, limit = 10) {
+    try {
+      // Get users this user follows
+      const following = await prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true }
+      })
+      const followingIds = following.map((f) => f.followingId)
 
-    // Get users that people this user follows also follow
-    const suggestions = await Follow.find({
-      follower: { $in: followingIds },
-      following: { $ne: userId, $nin: followingIds },
-    })
-      .populate("following", FOLLOW_USER_POPULATE_OPTIONS)
-      .limit(limit * 3) // Get more to deduplicate
-      .lean()
+      // Get users that people this user follows also follow
+      const suggestions = await prisma.follow.findMany({
+        where: {
+          followerId: { in: followingIds },
+          followingId: { notIn: [...followingIds, userId] }
+        },
+        include: { following: { select: FOLLOW_USER_POPULATE_OPTIONS.select } },
+        take: limit * 3 // Get more to deduplicate
+      })
 
-    // Count occurrences (more mutual connections = better suggestion)
-    const suggestionMap = new Map()
-    suggestions.forEach((s: any) => {
-      const id = s.following._id.toString()
-      if (!suggestionMap.has(id)) {
-        suggestionMap.set(id, { user: s.following, count: 0 })
-      }
-      suggestionMap.get(id).count++
-    })
+      // Count occurrences (more mutual connections = better suggestion)
+      const suggestionMap = new Map()
+      suggestions.forEach((s) => {
+        const id = s.followingId
+        if (!suggestionMap.has(id)) {
+          suggestionMap.set(id, { user: s.following, count: 0 })
+        }
+        suggestionMap.get(id).count++
+      })
 
-    // Sort by count and return top suggestions
-    return Array.from(suggestionMap.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, limit)
-      .map((s) => s.user)
+      // Sort by count and return top suggestions
+      return Array.from(suggestionMap.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit)
+        .map((s) => s.user)
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting suggested follows: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Delete all follows for a user (when user is deleted)
    */
-  async deleteAllByUser(userId: string | mongoose.Types.ObjectId) {
-    const [asFollower, asFollowing] = await Promise.all([
-      Follow.deleteMany({ follower: userId }),
-      Follow.deleteMany({ following: userId }),
-    ])
+  async deleteAllByUser(userId: string) {
+    try {
+      const [asFollower, asFollowing] = await Promise.all([
+        prisma.follow.deleteMany({ where: { followerId: userId } }),
+        prisma.follow.deleteMany({ where: { followingId: userId } })
+      ])
 
-    Logger.i(
-      LogTags.AUTH,
-      `Deleted ${asFollower.deletedCount} following and ${asFollowing.deletedCount} followers for user ${userId}`
-    )
+      Logger.i(
+        LogTags.AUTH,
+        `Deleted ${asFollower.count} following and ${asFollowing.count} followers for user ${userId}`
+      )
 
-    return {
-      deletedAsFollower: asFollower.deletedCount,
-      deletedAsFollowing: asFollowing.deletedCount,
-      total: asFollower.deletedCount + asFollowing.deletedCount,
+      return {
+        deletedAsFollower: asFollower.count,
+        deletedAsFollowing: asFollowing.count,
+        total: asFollower.count + asFollowing.count
+      }
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error deleting all follows: ${String(error)}`)
+      throw error
     }
   }
 
   /**
    * Get recent followers (newest followers)
    */
-  async getRecentFollowers(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 10
-  ) {
-    return Follow.find({ following: userId })
-      .populate("follower", FOLLOW_USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+  async getRecentFollowers(userId: string, limit = 10) {
+    try {
+      return await prisma.follow.findMany({
+        where: { followingId: userId },
+        include: { follower: { select: FOLLOW_USER_POPULATE_OPTIONS.select } },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting recent followers: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get recent following (newest users followed)
    */
-  async getRecentFollowing(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 10
-  ) {
-    return Follow.find({ follower: userId })
-      .populate("following", FOLLOW_USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+  async getRecentFollowing(userId: string, limit = 10) {
+    try {
+      return await prisma.follow.findMany({
+        where: { followerId: userId },
+        include: { following: { select: FOLLOW_USER_POPULATE_OPTIONS.select } },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting recent following: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Bulk check if user follows multiple users
    */
-  async isFollowingMultiple(
-    followerId: string | mongoose.Types.ObjectId,
-    followingIds: (string | mongoose.Types.ObjectId)[]
-  ): Promise<{ [userId: string]: boolean }> {
-    const follows = await Follow.find({
-      follower: followerId,
-      following: { $in: followingIds },
-    })
-      .select("following")
-      .lean()
+  async isFollowingMultiple(followerId: string, followingIds: string[]): Promise<{ [userId: string]: boolean }> {
+    try {
+      const follows = await prisma.follow.findMany({
+        where: {
+          followerId,
+          followingId: { in: followingIds }
+        },
+        select: { followingId: true }
+      })
 
-    const result: { [userId: string]: boolean } = {}
-    followingIds.forEach((id) => {
-      result[id.toString()] = false
-    })
+      const result: { [userId: string]: boolean } = {}
+      followingIds.forEach((id) => {
+        result[id] = false
+      })
 
-    follows.forEach((follow: any) => {
-      result[follow.following.toString()] = true
-    })
+      follows.forEach((follow) => {
+        result[follow.followingId] = true
+      })
 
-    return result
+      return result
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error checking multiple follows: ${String(error)}`)
+      throw error
+    }
   }
 
   /**
    * Get follow activity timeline (recent follows in network)
    */
-  async getFollowActivity(
-    userId: string | mongoose.Types.ObjectId,
-    limit = 20
-  ) {
-    // Get users this user follows
-    const following = await Follow.find({ follower: userId })
-      .select("following")
-      .lean()
-    const followingIds = following.map((f: any) => f.following)
+  async getFollowActivity(userId: string, limit = 20) {
+    try {
+      // Get users this user follows
+      const following = await prisma.follow.findMany({
+        where: { followerId: userId },
+        select: { followingId: true }
+      })
+      const followingIds = following.map((f) => f.followingId)
 
-    // Get recent follow activity from these users
-    return Follow.find({ follower: { $in: followingIds } })
-      .populate("follower", FOLLOW_USER_POPULATE_OPTIONS)
-      .populate("following", FOLLOW_USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+      // Get recent follow activity from these users
+      return await prisma.follow.findMany({
+        where: { followerId: { in: followingIds } },
+        include: {
+          follower: { select: FOLLOW_USER_POPULATE_OPTIONS.select },
+          following: { select: FOLLOW_USER_POPULATE_OPTIONS.select }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit
+      })
+    } catch (error) {
+      Logger.e(LogTags.DB_QUERY, `Error getting follow activity: ${String(error)}`)
+      throw error
+    }
   }
 }
 

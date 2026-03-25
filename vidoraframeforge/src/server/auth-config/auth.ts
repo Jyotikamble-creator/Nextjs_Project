@@ -1,9 +1,9 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { connectToDatabase } from "@/server/db"
+import { connectToDatabase, DB_DISABLED } from "@/server/db"
 import User from "@/server/models/User"
 import * as bcrypt from "bcryptjs"
-import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError, AuthenticationError } from "@/lib/logger"
+import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError, AuthenticationError, ConnectionError } from "@/lib/logger"
 import { isValidEmail } from "@/lib/validation"
 
 interface AuthUser {
@@ -29,6 +29,17 @@ export const authOptions: NextAuthOptions = {
 
         const normalizedEmail = credentials.email.toLowerCase().trim();
         logger.auth.loginAttempt(normalizedEmail);
+
+        // Skip authentication if database is disabled
+        if (DB_DISABLED) {
+          Logger.w(LogTags.LOGIN, 'Database is disabled. Returning mock user for development.');
+          return {
+            id: 'dev-user-' + Date.now(),
+            email: normalizedEmail,
+            name: normalizedEmail.split('@')[0],
+            role: 'user',
+          }
+        }
 
         try {
           await connectToDatabase()
@@ -70,6 +81,9 @@ export const authOptions: NextAuthOptions = {
 
           if (categorizedError instanceof DatabaseError) {
             Logger.e(LogTags.DB_ERROR, `Database error during login: ${categorizedError.message}`);
+          } else if (categorizedError instanceof ConnectionError) {
+            Logger.e(LogTags.DB_CONNECT, `Database unavailable during login: ${categorizedError.message}`);
+            throw new Error("AUTH_SERVICE_UNAVAILABLE");
           } else if (categorizedError instanceof ValidationError) {
             Logger.e(LogTags.LOGIN, `Validation error during login: ${categorizedError.message}`);
           } else if (categorizedError instanceof AuthenticationError) {
