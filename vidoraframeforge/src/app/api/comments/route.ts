@@ -3,10 +3,10 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { sanitizeString } from "@/lib/validation"
-import { commentRepository } from "@/server/repositories/CommentRepository"
-import { videoRepository } from "@/server/repositories/VideoRepository"
-import { photoRepository } from "@/server/repositories/PhotoRepository"
-import { journalRepository } from "@/server/repositories/JournalRepository"
+import { commentRepository } from "@/server/repositories/commentRepository"
+import { videoRepository } from "@/server/repositories/videoRepository"
+import { photoRepository } from "@/server/repositories/photoRepository"
+import { journalRepository } from "@/server/repositories/journalRepository"
 import { prisma } from "@/server/db"
 
 // GET /api/comments?contentType=video&contentId=xxx
@@ -28,11 +28,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get root comments
-    const comments = await commentRepository.findByContent(contentType, contentId, limit)
+    const comments = await commentRepository.findByContent(
+      contentType as "video" | "photo" | "journal",
+      contentId,
+      limit
+    )
 
     // Fetch replies for each comment (using repository)
     const commentsWithReplies = await Promise.all(
-      comments.map(async (comment) => {
+      comments.map(async (comment: typeof comments[0]) => {
         const replies = await commentRepository.getThread(comment.id)
         return { ...comment, replies: replies.slice(1) } // Exclude root comment from replies
       })
@@ -97,7 +101,7 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       contentType: contentType as 'video' | 'photo' | 'journal',
       contentId,
-      text: sanitizeString(content),
+      content: sanitizeString(content),
       parentCommentId: parentComment || undefined
     })
 
@@ -149,9 +153,10 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update comment
-    const updatedComment = await commentRepository.update(commentId, {
-      text: sanitizeString(content)
-    })
+    const updatedComment = await commentRepository.update(
+      commentId,
+      sanitizeString(content)
+    )
 
     Logger.i(LogTags.AUTH, `Comment ${commentId} updated`)
     return NextResponse.json({ comment: updatedComment })

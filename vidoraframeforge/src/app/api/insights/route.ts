@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
     })
 
     const moodMap = new Map<string, number>()
-    journals.forEach(j => {
+    journals.forEach((j: typeof journals[0]) => {
       if (j.mood) {
         moodMap.set(j.mood, (moodMap.get(j.mood) || 0) + 1)
       }
@@ -122,9 +122,9 @@ export async function GET(request: NextRequest) {
     ])
 
     const allDates = [
-      ...allPhotos.map(a => a.createdAt),
-      ...allVideos.map(a => a.createdAt),
-      ...allJournals.map(a => a.createdAt)
+      ...allPhotos.map((a: typeof allPhotos[0]) => a.createdAt),
+      ...allVideos.map((a: typeof allVideos[0]) => a.createdAt),
+      ...allJournals.map((a: typeof allJournals[0]) => a.createdAt)
     ]
       .map(d => d.toISOString().split('T')[0])
       .filter((date, index, self) => self.indexOf(date) === index)
@@ -217,9 +217,9 @@ export async function GET(request: NextRequest) {
 
     // Favorite tag across all content
     const allContent = [
-      ...allPhotos.map(p => ({ tags: [], type: 'photo' })),
-      ...allVideos.map(v => ({ tags: [], type: 'video' })),
-      ...allJournals.map(j => ({ tags: [], type: 'journal' }))
+      ...allPhotos.map((p: typeof allPhotos[0]) => ({ tags: [], type: 'photo' })),
+      ...allVideos.map((v: typeof allVideos[0]) => ({ tags: [], type: 'video' })),
+      ...allJournals.map((j: typeof allJournals[0]) => ({ tags: [], type: 'journal' }))
     ]
 
     // Get tags from content
@@ -239,120 +239,9 @@ export async function GET(request: NextRequest) {
     })
 
     const allTags = new Map<string, number>()
-    ;[...photoWithTags, ...videoWithTags, ...journalWithTags].forEach(content => {
+    ;[...photoWithTags, ...videoWithTags, ...journalWithTags].forEach((content: any) => {
       if (content.tags && Array.isArray(content.tags)) {
-        content.tags.forEach(tag => {
-          allTags.set(tag, (allTags.get(tag) || 0) + 1)
-        })
-      }
-    })
-
-    const favoriteTag = allTags.size > 0
-      ? Array.from(allTags).sort((a, b) => b[1] - a[1])[0][0]
-      : undefined
-
-    const insights: InsightsData = {
-      currentMonth: {
-        total: currentMonthTotal,
-        photos: currentMonthPhotos,
-        videos: currentMonthVideos,
-        journals: currentMonthJournals
-      },
-      longestStreak,
-      currentStreak,
-      moodFrequency,
-      monthlyActivity,
-      totalMemories,
-      favoriteTag,
-      mostProductiveMonth: mostProductiveMonth?.month,
-      averagePostsPerMonth
-    }
-
-    Logger.i(LogTags.AUTH, 'Memory insights generated successfully')
-
-      if (diffDays === 1) {
-        tempStreak++
-      } else {
-        longestStreak = Math.max(longestStreak, tempStreak)
-        tempStreak = 1
-      }
-    }
-    longestStreak = Math.max(longestStreak, tempStreak)
-
-    // Monthly activity for last 12 months
-    const monthlyActivity: MonthlyActivity[] = []
-    
-    for (let i = 11; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59)
-      
-      const [photos, videos, journals] = await Promise.all([
-        prisma.photo.count({
-          where: {
-            uploaderId: userId,
-            createdAt: { gte: monthStart, lte: monthEnd }
-          }
-        }),
-        prisma.video.count({
-          where: {
-            uploaderId: userId,
-            createdAt: { gte: monthStart, lte: monthEnd }
-          }
-        }),
-        prisma.journal.count({
-          where: {
-            authorId: userId,
-            createdAt: { gte: monthStart, lte: monthEnd }
-          }
-        })
-      ])
-
-      monthlyActivity.push({
-        month: monthStart.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        photos,
-        videos,
-        journals,
-        total: photos + videos + journals
-      })
-    }
-
-    // Find most productive month
-    const mostProductiveMonth = monthlyActivity.reduce((max, month) => 
-      month.total > max.total ? month : max
-    , monthlyActivity[0])
-
-    // Average posts per month
-    const averagePostsPerMonth = Math.round(
-      monthlyActivity.reduce((sum, m) => sum + m.total, 0) / monthlyActivity.length
-    )
-
-    // Favorite tag across all content
-    const allContent = [
-      ...allPhotos.map(p => ({ tags: [], type: 'photo' })),
-      ...allVideos.map(v => ({ tags: [], type: 'video' })),
-      ...allJournals.map(j => ({ tags: [], type: 'journal' }))
-    ]
-
-    // Get tags from content
-    const photoWithTags = await prisma.photo.findMany({
-      where: { uploaderId: userId, tags: { not: { isEmpty: true } } },
-      select: { tags: true }
-    })
-
-    const videoWithTags = await prisma.video.findMany({
-      where: { uploaderId: userId, tags: { not: { isEmpty: true } } },
-      select: { tags: true }
-    })
-
-    const journalWithTags = await prisma.journal.findMany({
-      where: { authorId: userId, tags: { not: { isEmpty: true } } },
-      select: { tags: true }
-    })
-
-    const allTags = new Map<string, number>()
-    ;[...photoWithTags, ...videoWithTags, ...journalWithTags].forEach(content => {
-      if (content.tags && Array.isArray(content.tags)) {
-        content.tags.forEach(tag => {
+        content.tags.forEach((tag: string) => {
           allTags.set(tag, (allTags.get(tag) || 0) + 1)
         })
       }

@@ -1,8 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/server/db"
-import { videoRepository } from "@/server/repositories/VideoRepository"
-import { photoRepository } from "@/server/repositories/PhotoRepository"
-import { journalRepository } from "@/server/repositories/JournalRepository"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
 interface MediaItem {
@@ -159,24 +156,6 @@ export async function GET(request: NextRequest) {
     }
 
     Logger.i(LogTags.AUTH, `Media fetched successfully: ${allMedia.length} items returned`);
-    
-    return NextResponse.json({
-      media: allMedia,
-      total: allMedia.length,
-      filters: { type, search, tag, startDate, endDate }
-    })
-  } catch (error) {
-    const categorizedError = categorizeError(error);
-
-    if (categorizedError instanceof DatabaseError) {
-      Logger.e(LogTags.DB_ERROR, `Database error in media fetch: ${categorizedError.message}`);
-      return NextResponse.json({ error: "Database error occurred" }, { status: 500 });
-    }
-
-    Logger.e(LogTags.AUTH, `Unexpected error in media fetch: ${categorizedError.message}`, { error: categorizedError });
-    return NextResponse.json({ error: "Failed to fetch media" }, { status: 500 })
-  }
-}
     
     return NextResponse.json({
       media: allMedia,
