@@ -1,21 +1,19 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectToDatabase } from "@/server/db"
-import Comment from "@/server/models/Comment"
-import Video from "@/server/models/Video"
-import Photo from "@/server/models/Photo"
-import Journal from "@/server/models/Journal"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { sanitizeString } from "@/lib/validation"
-import mongoose from "mongoose"
+import { commentRepository } from "@/server/repositories/CommentRepository"
+import { videoRepository } from "@/server/repositories/VideoRepository"
+import { photoRepository } from "@/server/repositories/PhotoRepository"
+import { journalRepository } from "@/server/repositories/JournalRepository"
+import { prisma } from "@/server/db"
 
 // GET /api/comments?contentType=video&contentId=xxx
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.AUTH, 'Comments fetch request received');
 
   try {
-    await connectToDatabase()
     const { searchParams } = new URL(request.url)
     const contentType = searchParams.get("contentType")
     const contentId = searchParams.get("contentId")
@@ -29,28 +27,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(contentId)) {
-      return NextResponse.json({ error: "Invalid content ID format" }, { status: 400 })
-    }
+    // Get root comments
+    const comments = await commentRepository.findByContent(contentType, contentId, limit)
 
-    const comments = await Comment.find({ 
-      contentType, 
-      contentId,
-      parentComment: { $exists: false } // Only root comments
-    })
-      .populate("author", "name email avatar")
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
-
-    // Fetch replies for each comment
+    // Fetch replies for each comment (using repository)
     const commentsWithReplies = await Promise.all(
       comments.map(async (comment) => {
-        const replies = await Comment.find({ parentComment: comment._id })
-          .populate("author", "name email avatar")
-          .sort({ createdAt: 1 })
-          .lean()
-        return { ...comment, replies }
+        const replies = await commentRepository.getThread(comment.id)
+        return { ...comment, replies: replies.slice(1) } // Exclude root comment from replies
       })
     )
 
@@ -74,7 +58,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    await connectToDatabase()
     const body = await request.json()
     const { contentType, contentId, content, parentComment } = body
 
@@ -87,10 +70,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(contentId)) {
-      return NextResponse.json({ error: "Invalid content ID format" }, { status: 400 })
-    }
-
     if (content.length > 500) {
       return NextResponse.json({ error: "Comment cannot exceed 500 characters" }, { status: 400 })
     }
@@ -99,13 +78,13 @@ export async function POST(request: NextRequest) {
     let contentExists = false
     switch (contentType) {
       case "video":
-        contentExists = !!(await Video.findById(contentId))
+        contentExists = !!(await videoRepository.findById(contentId))
         break
       case "photo":
-        contentExists = !!(await Photo.findById(contentId))
+        contentExists = !!(await photoRepository.findById(contentId))
         break
       case "journal":
-        contentExists = !!(await Journal.findById(contentId))
+        contentExists = !!(await journalRepository.findById(contentId))
         break
     }
 
@@ -113,25 +92,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Content not found" }, { status: 404 })
     }
 
-    // Create comment
-    const comment = await Comment.create({
-      author: session.user.id,
-      contentType,
+    // Create comment using repository
+    const comment = await commentRepository.create({
+      userId: session.user.id,
+      contentType: contentType as 'video' | 'photo' | 'journal',
       contentId,
-      content: sanitizeString(content),
-      parentComment: parentComment || undefined
+      text: sanitizeString(content),
+      parentCommentId: parentComment || undefined
     })
 
-    // Increment comment count on the content
-    const Model = contentType === "video" ? Video : contentType === "photo" ? Photo : Journal
-    await Model.findByIdAndUpdate(contentId, { $inc: { commentCount: 1 } })
-
-    const populatedComment = await Comment.findById(comment._id)
-      .populate("author", "name email avatar")
-      .lean()
-
     Logger.i(LogTags.AUTH, `Comment created on ${contentType} ${contentId}`)
-    return NextResponse.json({ comment: populatedComment }, { status: 201 })
+    return NextResponse.json({ comment }, { status: 201 })
   } catch (error) {
     const categorizedError = categorizeError(error)
     Logger.e(LogTags.AUTH, 'Failed to create comment', { error: categorizedError })
@@ -158,7 +129,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    await connectToDatabase()
     const { searchParams } = new URL(request.url)
     const commentId = searchParams.get("id")
     const body = await request.json()
@@ -168,27 +138,20 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Comment ID and content are required" }, { status: 400 })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(commentId)) {
-      return NextResponse.json({ error: "Invalid comment ID format" }, { status: 400 })
-    }
-
-    const comment = await Comment.findById(commentId)
+    const comment = await commentRepository.findById(commentId)
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 })
     }
 
     // Check ownership
-    if (comment.author.toString() !== session.user.id) {
+    if (comment.userId !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized to edit this comment" }, { status: 403 })
     }
 
-    comment.content = sanitizeString(content)
-    comment.isEdited = true
-    await comment.save()
-
-    const updatedComment = await Comment.findById(commentId)
-      .populate("author", "name email avatar")
-      .lean()
+    // Update comment
+    const updatedComment = await commentRepository.update(commentId, {
+      text: sanitizeString(content)
+    })
 
     Logger.i(LogTags.AUTH, `Comment ${commentId} updated`)
     return NextResponse.json({ comment: updatedComment })
@@ -209,7 +172,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    await connectToDatabase()
     const { searchParams } = new URL(request.url)
     const commentId = searchParams.get("id")
 
@@ -217,26 +179,18 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Comment ID is required" }, { status: 400 })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(commentId)) {
-      return NextResponse.json({ error: "Invalid comment ID format" }, { status: 400 })
-    }
-
-    const comment = await Comment.findById(commentId)
+    const comment = await commentRepository.findById(commentId)
     if (!comment) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 })
     }
 
     // Check ownership
-    if (comment.author.toString() !== session.user.id) {
+    if (comment.userId !== session.user.id) {
       return NextResponse.json({ error: "Unauthorized to delete this comment" }, { status: 403 })
     }
 
     // Delete comment and its replies
-    await Comment.deleteMany({ $or: [{ _id: commentId }, { parentComment: commentId }] })
-
-    // Decrement comment count
-    const Model = comment.contentType === "video" ? Video : comment.contentType === "photo" ? Photo : Journal
-    await Model.findByIdAndUpdate(comment.contentId, { $inc: { commentCount: -1 } })
+    await commentRepository.deleteWithReplies(commentId)
 
     Logger.i(LogTags.AUTH, `Comment ${commentId} deleted`)
     return NextResponse.json({ message: "Comment deleted successfully" })

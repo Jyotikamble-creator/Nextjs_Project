@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from "@/server/db"
-import Journal from "@/server/models/Journal"
+import { prisma } from "@/server/db"
+import { journalRepository } from "@/server/repositories/JournalRepository"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
 export async function GET(
@@ -10,10 +10,21 @@ export async function GET(
   Logger.d(LogTags.JOURNAL_FETCH, 'Individual journal fetch request received', { journalId: params.id });
 
   try {
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for individual journal fetch');
-
-    const journal = await Journal.findById(params.id).populate("author", "name avatar")
+    // Fetch journal with author and attachments
+    const journal = await prisma.journal.findUnique({
+      where: { id: params.id },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            email: true
+          }
+        },
+        attachments: true
+      }
+    })
 
     if (!journal) {
       Logger.w(LogTags.JOURNAL_FETCH, 'Journal not found', { journalId: params.id });

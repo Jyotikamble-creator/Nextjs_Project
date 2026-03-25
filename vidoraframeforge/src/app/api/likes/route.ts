@@ -1,13 +1,12 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectToDatabase } from "@/server/db"
-import Like from "@/server/models/Like"
-import Video from "@/server/models/Video"
-import Photo from "@/server/models/Photo"
-import Journal from "@/server/models/Journal"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
-import mongoose from "mongoose"
+import { likeRepository } from "@/server/repositories/LikeRepository"
+import { videoRepository } from "@/server/repositories/VideoRepository"
+import { photoRepository } from "@/server/repositories/PhotoRepository"
+import { journalRepository } from "@/server/repositories/JournalRepository"
+import { prisma } from "@/server/db"
 
 // GET /api/likes?contentType=video&contentId=xxx - Check if user liked and get like count
 export async function GET(request: NextRequest) {
@@ -15,7 +14,6 @@ export async function GET(request: NextRequest) {
 
   try {
     const session = await getServerSession(authOptions)
-    await connectToDatabase()
     
     const { searchParams } = new URL(request.url)
     const contentType = searchParams.get("contentType")
@@ -29,22 +27,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(contentId)) {
-      return NextResponse.json({ error: "Invalid content ID format" }, { status: 400 })
-    }
-
-    // Get total like count
-    const likeCount = await Like.countDocuments({ contentType, contentId })
+    // Get total like count using Prisma
+    const likeCount = await prisma.like.count({
+      where: { contentType: contentType as any, contentId }
+    })
 
     // Check if current user liked (if authenticated)
     let isLiked = false
     if (session?.user) {
-      const userLike = await Like.findOne({
-        user: session.user.id,
-        contentType,
-        contentId
-      })
-      isLiked = !!userLike
+      isLiked = await likeRepository.hasLiked(session.user.id, contentType as any, contentId)
     }
 
     return NextResponse.json({ likeCount, isLiked })
@@ -55,20 +46,18 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/likes - Like content
+// POST /api/likes - Toggle like on content
 export async function POST(request: NextRequest) {
-  Logger.d(LogTags.AUTH, 'Like content request received');
+  Logger.d(LogTags.AUTH, 'Like creation request received');
 
   try {
     const session = await getServerSession(authOptions)
+
     if (!session?.user) {
-      Logger.w(LogTags.AUTH, 'Like request failed: unauthorized');
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    await connectToDatabase()
-    const body = await request.json()
-    const { contentType, contentId } = body
+    const { contentType, contentId } = await request.json()
 
     if (!contentType || !contentId) {
       return NextResponse.json({ error: "Content type and ID are required" }, { status: 400 })
@@ -78,61 +67,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(contentId)) {
-      return NextResponse.json({ error: "Invalid content ID format" }, { status: 400 })
-    }
-
-    // Verify content exists
-    let contentExists = false
-    switch (contentType) {
-      case "video":
-        contentExists = !!(await Video.findById(contentId))
-        break
-      case "photo":
-        contentExists = !!(await Photo.findById(contentId))
-        break
-      case "journal":
-        contentExists = !!(await Journal.findById(contentId))
-        break
-    }
-
+    // Check if content exists
+    const contentExists = await validateContentExists(contentType, contentId)
     if (!contentExists) {
       return NextResponse.json({ error: "Content not found" }, { status: 404 })
     }
 
-    // Check if already liked
-    const existingLike = await Like.findOne({
-      user: session.user.id,
-      contentType,
+    // Toggle like using repository
+    const result = await likeRepository.toggleLike(
+      session.user.id,
+      contentType as any,
       contentId
-    })
+    )
 
-    if (existingLike) {
-      return NextResponse.json({ error: "Already liked this content" }, { status: 409 })
+    // Update user stats
+    if (result.liked) {
+      await prisma.userStats.update({
+        where: { userId: session.user.id },
+        data: { likesGiven: { increment: 1 } }
+      })
+    } else {
+      await prisma.userStats.update({
+        where: { userId: session.user.id },
+        data: { likesGiven: { increment: -1 } }
+      })
     }
 
-    // Create like
-    const like = await Like.create({
-      user: session.user.id,
-      contentType,
-      contentId
-    })
-
-    // Increment like count on the content
-    const Model = contentType === "video" ? Video : contentType === "photo" ? Photo : Journal
-    await Model.findByIdAndUpdate(contentId, { $inc: { likes: 1 } })
-
-    Logger.i(LogTags.AUTH, `User ${session.user.id} liked ${contentType} ${contentId}`)
-    return NextResponse.json({ message: "Successfully liked content", like }, { status: 201 })
+    return NextResponse.json(result)
   } catch (error) {
     const categorizedError = categorizeError(error)
-    Logger.e(LogTags.AUTH, 'Failed to like content', { error: categorizedError })
-    
-    if (categorizedError instanceof DatabaseError) {
-      return NextResponse.json({ error: "Database error occurred" }, { status: 500 })
-    }
-    
-    return NextResponse.json({ error: "Failed to like content" }, { status: 500 })
+    Logger.e(LogTags.AUTH, 'Failed to create like', { error: categorizedError })
+    return NextResponse.json({ error: "Failed to toggle like" }, { status: 500 })
   }
 }
 
@@ -143,11 +108,9 @@ export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
-      Logger.w(LogTags.AUTH, 'Unlike request failed: unauthorized');
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    await connectToDatabase()
     const { searchParams } = new URL(request.url)
     const contentType = searchParams.get("contentType")
     const contentId = searchParams.get("contentId")
@@ -160,35 +123,37 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
     }
 
-    if (!mongoose.Types.ObjectId.isValid(contentId)) {
-      return NextResponse.json({ error: "Invalid content ID format" }, { status: 400 })
-    }
+    // Delete like using repository
+    const deleted = await likeRepository.delete(session.user.id, contentType as any, contentId)
 
-    // Delete like
-    const result = await Like.findOneAndDelete({
-      user: session.user.id,
-      contentType,
-      contentId
-    })
-
-    if (!result) {
+    if (!deleted) {
       return NextResponse.json({ error: "Like not found" }, { status: 404 })
     }
 
-    // Decrement like count on the content
-    const Model = contentType === "video" ? Video : contentType === "photo" ? Photo : Journal
-    await Model.findByIdAndUpdate(contentId, { $inc: { likes: -1 } })
+    // Update user stats
+    await prisma.userStats.update({
+      where: { userId: session.user.id },
+      data: { likesGiven: { increment: -1 } }
+    })
 
-    Logger.i(LogTags.AUTH, `User ${session.user.id} unliked ${contentType} ${contentId}`)
-    return NextResponse.json({ message: "Successfully unliked content" })
+    return NextResponse.json({ message: "Unlike successful" })
   } catch (error) {
     const categorizedError = categorizeError(error)
     Logger.e(LogTags.AUTH, 'Failed to unlike content', { error: categorizedError })
-    
-    if (categorizedError instanceof DatabaseError) {
-      return NextResponse.json({ error: "Database error occurred" }, { status: 500 })
-    }
-    
     return NextResponse.json({ error: "Failed to unlike content" }, { status: 500 })
   }
+}
+
+async function validateContentExists(contentType: string, contentId: string): Promise<boolean> {
+  if (contentType === 'video') {
+    const video = await videoRepository.findById(contentId)
+    return !!video
+  } else if (contentType === 'photo') {
+    const photo = await photoRepository.findById(contentId)
+    return !!photo
+  } else if (contentType === 'journal') {
+    const journal = await journalRepository.findById(contentId)
+    return !!journal
+  }
+  return false
 }

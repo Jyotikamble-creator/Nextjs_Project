@@ -1,27 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { connectToDatabase } from "@/server/db"
-import Journal from "@/server/models/Journal"
-import User from "@/server/models/User"
+import { prisma } from "@/server/db"
+import { journalRepository } from "@/server/repositories/JournalRepository"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, sanitizeString } from "@/lib/validation"
-import { 
-  buildSearchQuery, 
-  buildTagQuery, 
-  buildUserQuery, 
-  mergeQueries 
-} from "@/server/utils/queryHelpers"
-import { updateUserStats, USER_POPULATE_OPTIONS } from "@/server/utils/apiHelpers"
-import mongoose from "mongoose"
 
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.JOURNAL_FETCH, 'Journal fetch request received');
 
   try {
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal fetch');
-
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
     const tag = searchParams.get("tag")
@@ -30,29 +18,43 @@ export async function GET(request: NextRequest) {
 
     Logger.d(LogTags.JOURNAL_FETCH, 'Query parameters parsed', { hasSearch: !!search, tag, userId, limit });
 
-    // Build query using helpers
-    const baseQuery: Record<string, unknown> = userId ? {} : { isPublic: true }
-    const tagQuery = buildTagQuery(tag)
-    const searchQuery = search ? buildSearchQuery(search, ["title", "content"]) : {}
+    // Build filters for Prisma
+    const filters: any = {}
     
-    let userQuery = {}
     if (userId) {
-      try {
-        userQuery = buildUserQuery(userId, "author") // Journal uses 'author' field
-      } catch (error) {
-        Logger.w(LogTags.JOURNAL_FETCH, 'Invalid userId format', { userId });
-        return NextResponse.json({ error: "Invalid user ID format" }, { status: 400 })
-      }
+      filters.authorId = userId
+    } else {
+      filters.isPublic = true
     }
 
-    const query = mergeQueries(baseQuery, tagQuery, searchQuery, userQuery)
+    if (tag) {
+      filters.tags = { hasSome: [tag] }
+    }
 
-    // Optimized query
-    const journals = await Journal.find(query)
-      .populate("author", USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
+    if (search) {
+      filters.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { content: { contains: search, mode: 'insensitive' } }
+      ]
+    }
+
+    // Fetch journals with includes
+    const journals = await prisma.journal.findMany({
+      where: filters,
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+            email: true
+          }
+        },
+        attachments: true
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    })
 
     Logger.i(LogTags.JOURNAL_FETCH, `Journals fetched successfully: ${journals.length} journals returned`);
     return NextResponse.json(journals)
@@ -81,9 +83,6 @@ export async function POST(request: NextRequest) {
     }
 
     Logger.d(LogTags.JOURNAL_CREATE, 'User authenticated', { userId: session.user.id });
-
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal creation');
 
     const body = await request.json()
     const { title, content, tags, attachments, isPublic, mood, location } = body
@@ -124,26 +123,43 @@ export async function POST(request: NextRequest) {
 
     Logger.d(LogTags.JOURNAL_CREATE, 'Input validation passed', { title: sanitizedTitle });
 
-    const journal = await Journal.create({
+    // Create journal using repository
+    const journal = await journalRepository.create({
       title: sanitizedTitle,
       content: sanitizedContent,
-      author: session.user.id,
+      authorId: session.user.id,
       tags: tags || [],
-      attachments: attachments || [],
       isPublic: isPublic !== false,
       mood: sanitizedMood,
       location: sanitizedLocation,
     })
 
-    // Update user stats using helper
-    await updateUserStats(session.user.id, { totalJournals: 1 });
+    // Create attachments if provided
+    if (attachments && attachments.length > 0) {
+      await Promise.all(
+        attachments.map((attachment: any) =>
+          prisma.journalAttachment.create({
+            data: {
+              journalId: journal.id,
+              url: attachment.url,
+              type: attachment.type
+            }
+          })
+        )
+      )
+    }
 
-    const populatedJournal = await Journal.findById(journal._id)
-      .populate("author", USER_POPULATE_OPTIONS)
-      .lean()
+    // Update user stats
+    await prisma.userStats.update({
+      where: { userId: session.user.id },
+      data: { journalsCreated: { increment: 1 } }
+    })
+
+    // Fetch with attachments
+    const populatedJournal = await journalRepository.findById(journal.id)
 
     Logger.i(LogTags.JOURNAL_CREATE, 'Journal created successfully', {
-      journalId: journal._id.toString(),
+      journalId: journal.id,
       userId: session.user.id,
       title: sanitizedTitle
     });
@@ -180,9 +196,6 @@ export async function PUT(request: NextRequest) {
 
     Logger.d(LogTags.JOURNAL_UPDATE, 'User authenticated', { userId: session.user.id });
 
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for journal update');
-
     const { searchParams } = new URL(request.url)
     const journalId = searchParams.get("id")
 
@@ -203,17 +216,17 @@ export async function PUT(request: NextRequest) {
     });
 
     // Find the journal and check ownership
-    const existingJournal = await Journal.findById(journalId)
+    const existingJournal = await journalRepository.findById(journalId)
     if (!existingJournal) {
       Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: journal not found', { journalId });
       return NextResponse.json({ error: "Journal not found" }, { status: 404 })
     }
 
-    if (existingJournal.author.toString() !== session.user.id) {
+    if (existingJournal.authorId !== session.user.id) {
       Logger.w(LogTags.JOURNAL_UPDATE, 'Journal update failed: unauthorized access', {
         journalId,
         userId: session.user.id,
-        authorId: existingJournal.author.toString()
+        authorId: existingJournal.authorId
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
@@ -230,25 +243,41 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Content must be less than 10,000 characters" }, { status: 400 })
     }
 
-    // Sanitize inputs
-    const updateData: Record<string, unknown> = {}
+    // Prepare update data
+    const updateData: any = {}
     if (title !== undefined) updateData.title = sanitizeString(title);
     if (content !== undefined) updateData.content = sanitizeString(content);
     if (tags !== undefined) updateData.tags = tags;
-    if (attachments !== undefined) updateData.attachments = attachments;
     if (isPublic !== undefined) updateData.isPublic = isPublic;
-    if (mood !== undefined) updateData.mood = mood ? sanitizeString(mood) : undefined;
-    if (location !== undefined) updateData.location = location ? sanitizeString(location) : undefined;
-
+    if (mood !== undefined) updateData.mood = mood ? sanitizeString(mood) : null;
+    if (location !== undefined) updateData.location = location ? sanitizeString(location) : null;
     updateData.updatedAt = new Date();
 
     Logger.d(LogTags.JOURNAL_UPDATE, 'Update data prepared', { journalId });
 
-    const updatedJournal = await Journal.findByIdAndUpdate(
-      journalId,
-      updateData,
-      { new: true }
-    ).populate("author", "name avatar")
+    // Update journal
+    const updatedJournal = await journalRepository.update(journalId, updateData)
+
+    // Update attachments if provided
+    if (attachments !== undefined) {
+      // Delete existing attachments
+      await prisma.journalAttachment.deleteMany({ where: { journalId } })
+      
+      // Create new attachments
+      if (attachments.length > 0) {
+        await Promise.all(
+          attachments.map((attachment: any) =>
+            prisma.journalAttachment.create({
+              data: {
+                journalId,
+                url: attachment.url,
+                type: attachment.type
+              }
+            })
+          )
+        )
+      }
+    }
 
     Logger.i(LogTags.JOURNAL_UPDATE, 'Journal updated successfully', {
       journalId,
@@ -308,19 +337,23 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Journal not found" }, { status: 404 })
     }
 
-    if (existingJournal.author.toString() !== session.user.id) {
+    if (existingJournal.authorId !== session.user.id) {
       Logger.w(LogTags.JOURNAL_DELETE, 'Journal deletion failed: unauthorized access', {
         journalId,
         userId: session.user.id,
-        authorId: existingJournal.author.toString()
+        authorId: existingJournal.authorId
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    await Journal.findByIdAndDelete(journalId)
+    // Delete journal using repository (cascades to attachments)
+    await journalRepository.delete(journalId)
 
-    // Update user stats using helper
-    await updateUserStats(session.user.id, { totalJournals: -1 });
+    // Update user stats
+    await prisma.userStats.update({
+      where: { userId: session.user.id },
+      data: { journalsCreated: { increment: -1 } }
+    })
 
     Logger.i(LogTags.JOURNAL_DELETE, 'Journal deleted successfully', {
       journalId,

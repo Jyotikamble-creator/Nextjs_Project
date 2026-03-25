@@ -1,7 +1,6 @@
 import type { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { connectToDatabase, DB_DISABLED } from "@/server/db"
-import User from "@/server/models/User"
+import { prisma } from "@/server/db"
 import * as bcrypt from "bcryptjs"
 import { Logger, logger, LogTags, categorizeError, DatabaseError, ValidationError, AuthenticationError, ConnectionError } from "@/lib/logger"
 import { isValidEmail } from "@/lib/validation"
@@ -30,27 +29,18 @@ export const authOptions: NextAuthOptions = {
         const normalizedEmail = credentials.email.toLowerCase().trim();
         logger.auth.loginAttempt(normalizedEmail);
 
-        // Skip authentication if database is disabled
-        if (DB_DISABLED) {
-          Logger.w(LogTags.LOGIN, 'Database is disabled. Returning mock user for development.');
-          return {
-            id: 'dev-user-' + Date.now(),
-            email: normalizedEmail,
-            name: normalizedEmail.split('@')[0],
-            role: 'user',
-          }
-        }
-
         try {
-          await connectToDatabase()
+          // Fetch user from PostgreSQL via Prisma
+          const user = await prisma.user.findUnique({
+            where: { email: normalizedEmail }
+          })
 
-          const user = await User.findOne({ email: normalizedEmail })
           if (!user) {
             Logger.w(LogTags.LOGIN, 'Login failed: user not found', { email: Logger.maskEmail(normalizedEmail) });
             return null
           }
 
-          Logger.d(LogTags.LOGIN, 'User found, checking password', { userId: user._id.toString(), hasPassword: !!user.password });
+          Logger.d(LogTags.LOGIN, 'User found, checking password', { userId: user.id, hasPassword: !!user.password });
 
           // Check if user has a password (defensive programming)
           if (!user.password) {
@@ -66,10 +56,10 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
-          logger.auth.loginSuccess(user._id.toString());
+          logger.auth.loginSuccess(user.id);
 
           return {
-            id: user._id.toString(),
+            id: user.id,
             email: user.email,
             name: user.name,
             role: user.role,

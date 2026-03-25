@@ -1,15 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from "@/server/db"
-import User from "@/server/models/User"
+import { prisma } from "@/server/db"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
 export async function GET(request: NextRequest) {
   Logger.d(LogTags.AUTH, 'User stats request received');
 
   try {
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connection established for user stats');
-
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
 
@@ -20,19 +16,22 @@ export async function GET(request: NextRequest) {
 
     Logger.d(LogTags.AUTH, 'Fetching stats for user', { userId });
 
-    const user = await User.findById(userId).select('stats')
+    // Fetch user stats from UserStats table
+    const stats = await prisma.userStats.findUnique({
+      where: { userId }
+    })
 
-    if (!user) {
-      Logger.w(LogTags.AUTH, 'User stats request failed: user not found', { userId });
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!stats) {
+      Logger.w(LogTags.AUTH, 'User stats request failed: stats not found', { userId });
+      return NextResponse.json({ error: "User stats not found" }, { status: 404 })
     }
 
     Logger.i(LogTags.AUTH, 'User stats fetched successfully', {
       userId,
-      stats: user.stats
+      stats
     });
 
-    return NextResponse.json({ stats: user.stats })
+    return NextResponse.json({ stats })
   } catch (error) {
     const categorizedError = categorizeError(error);
 
