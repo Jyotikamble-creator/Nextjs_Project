@@ -109,7 +109,7 @@ export default function UnifiedUploadPage() {
         router.push('/dashboard')
       } else if (uploadType === 'photo') {
         // Upload photo to ImageKit
-        const uploadResult = await uploadToImageKit(selectedFiles[0])
+        const uploadResult = await uploadToImageKit(selectedFiles[0]) as any
 
         // Save photo metadata
         const photoData = {
@@ -145,7 +145,7 @@ export default function UnifiedUploadPage() {
         // Upload attachments to ImageKit
         const uploadedAttachments = []
         for (const file of selectedFiles) {
-          const uploadResult = await uploadToImageKit(file)
+          const uploadResult = await uploadToImageKit(file) as any
           uploadedAttachments.push({
             url: uploadResult.url,
             fileId: uploadResult.fileId,

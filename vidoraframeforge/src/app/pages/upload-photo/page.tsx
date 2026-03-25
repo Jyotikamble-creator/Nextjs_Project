@@ -65,7 +65,7 @@ export default function UploadPhotoPage() {
 
     try {
       // Upload to ImageKit
-      const uploadResult = await uploadToImageKit(selectedFile)
+      const uploadResult = await uploadToImageKit(selectedFile) as any
 
       // Then, save photo metadata
       const photoData = {
