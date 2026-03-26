@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["fullTextIndex"]
 }
 
 datasource db {
@@ -43,7 +44,7 @@ model User {
 
   @@index([email])
   @@index([username])
-  @@fulltext([username, firstName, lastName, bio])
+  // @@fulltext([username, firstName, lastName, bio]) // PostgreSQL native fulltext requires custom implementation
 }
 
 model UserStats {
@@ -89,7 +90,7 @@ model Video {
   @@index([category])
   @@index([privacy])
   @@index([createdAt])
-  @@fulltext([title, description, tags])
+  // @@fulltext([title, description, tags]) // PostgreSQL native fulltext requires custom implementation
 }
 
 model Photo {
@@ -117,7 +118,7 @@ model Photo {
   @@index([album])
   @@index([privacy])
   @@index([createdAt])
-  @@fulltext([title, description, tags])
+  // @@fulltext([title, description, tags]) // PostgreSQL native fulltext requires custom implementation
 }
 
 model Journal {
@@ -140,7 +141,7 @@ model Journal {
   @@index([mood])
   @@index([privacy])
   @@index([createdAt])
-  @@fulltext([title, content])
+  // @@fulltext([title, content]) // PostgreSQL native fulltext requires custom implementation
 }
 
 model JournalAttachment {
@@ -174,15 +175,15 @@ model Comment {
   updatedAt             DateTime    @updatedAt
 
   // Relations for direct content references
-  video                 Video?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  photo                 Photo?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  journal               Journal?    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  video                 Video?      @relation(fields: [contentId], references: [id], onDelete: Cascade, map: "Comment_video_fkey")
+  photo                 Photo?      @relation(fields: [contentId], references: [id], onDelete: Cascade, map: "Comment_photo_fkey")
+  journal               Journal?    @relation(fields: [contentId], references: [id], onDelete: Cascade, map: "Comment_journal_fkey")
 
   @@index([userId])
   @@index([parentCommentId])
   @@index([contentType, contentId])
   @@index([createdAt])
-  @@fulltext([content])
+  // @@fulltext([content]) // PostgreSQL native fulltext requires custom implementation
 }
 
 model Like {
@@ -197,9 +198,9 @@ model Like {
   createdAt             DateTime    @default(now())
 
   // Relations for direct content references
-  video                 Video?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  photo                 Photo?      @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  journal               Journal?    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  video                 Video?      @relation(fields: [contentId], references: [id], onDelete: Cascade, map: "Like_video_fkey")
+  photo                 Photo?      @relation(fields: [contentId], references: [id], onDelete: Cascade, map: "Like_photo_fkey")
+  journal               Journal?    @relation(fields: [contentId], references: [id], onDelete: Cascade, map: "Like_journal_fkey")
 
   @@unique([userId, contentType, contentId])
   @@index([userId])
