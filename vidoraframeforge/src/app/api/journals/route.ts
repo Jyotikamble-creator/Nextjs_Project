@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { prisma } from "@/server/db"
-import { journalRepository } from "@/server/repositories/JournalRepository"
+import { journalRepository } from "@/server/repositories/journalRepository"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { isValidVideoTitle, sanitizeString } from "@/lib/validation"

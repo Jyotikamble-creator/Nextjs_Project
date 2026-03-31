@@ -10,16 +10,14 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  // TODO: Auth providers temporarily disabled for development
-  // Uncomment SessionProvider and AuthProvider to re-enable authentication
   return (
-    /* <SessionProvider> */
-      /* <AuthProvider> */
+    <SessionProvider>
+      <AuthProvider>
         <ThemeProvider>
           <PWAInstaller />
           {children}
         </ThemeProvider>
-      {/* </AuthProvider> */}
-    {/* </SessionProvider> */}
+      </AuthProvider>
+    </SessionProvider>
   )
 }

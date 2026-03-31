@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/server/auth-config/auth";
-import User from "@/server/models/User";
 import { Logger, LogTags } from "@/lib/logger";
+import { userRepository } from "@/server/repositories/userRepository";
 
 /**
  * Get authenticated user from session
@@ -40,22 +40,18 @@ export async function updateUserStats(
   }>
 ) {
   try {
-    const updateFields: Record<string, any> = {
-      'stats.lastActive': new Date()
+    const updateData: any = {
+      stats: {
+        update: {
+          lastActive: new Date(),
+          ...(updates.totalPhotos !== undefined && { totalPhotos: updates.totalPhotos }),
+          ...(updates.totalVideos !== undefined && { totalVideos: updates.totalVideos }),
+          ...(updates.totalJournals !== undefined && { totalJournals: updates.totalJournals })
+        }
+      }
     };
-    
-    // Build increment operations
-    const incrementOps: Record<string, number> = {};
-    if (updates.totalPhotos !== undefined) incrementOps['stats.totalPhotos'] = updates.totalPhotos;
-    if (updates.totalVideos !== undefined) incrementOps['stats.totalVideos'] = updates.totalVideos;
-    if (updates.totalJournals !== undefined) incrementOps['stats.totalJournals'] = updates.totalJournals;
-    
-    const updateQuery: any = { $set: updateFields };
-    if (Object.keys(incrementOps).length > 0) {
-      updateQuery.$inc = incrementOps;
-    }
-    
-    await User.findByIdAndUpdate(userId, updateQuery);
+
+    await userRepository.update(userId, updateData);
     Logger.d(LogTags.USER_UPDATE, 'User stats updated', { userId, updates });
   } catch (error) {
     Logger.e(LogTags.USER_UPDATE, 'Failed to update user stats', { error, userId });

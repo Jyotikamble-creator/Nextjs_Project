@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/server/auth-config/auth"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
-import { followRepository } from "@/server/repositories/FollowRepository"
+import { followRepository } from "@/server/repositories/followRepository"
 import { prisma } from "@/server/db"
 
 // GET /api/follows?userId=xxx&type=followers|following
