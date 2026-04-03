@@ -71,7 +71,7 @@ export function FollowButton({ userId, initialFollowing = false, onFollowChange 
       className={`inline-flex items-center px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
         isFollowing
           ? "bg-gray-600 hover:bg-gray-700 text-white"
-          : "bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+          : "bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
       } disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       {loading ? (

@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
 
 const DATABASE_URL = process.env.DATABASE_URL
+const DATABASE_URL_UNPOOLED = process.env.DATABASE_URL_UNPOOLED
 export const DB_DISABLED = !DATABASE_URL
 
 if (DB_DISABLED) {
@@ -15,11 +16,23 @@ declare global {
 
 let prisma: PrismaClient
 
+const prismaClientOptions = {
+  // Use unpooled connection for migrations, regular connection for queries
+  // This approach is compatible with Prisma 5.22+
+  ...(process.env.NODE_ENV === "production" && {
+    datasources: {
+      db: {
+        url: DATABASE_URL,
+      },
+    },
+  }),
+}
+
 if (process.env.NODE_ENV === "production") {
-  prisma = new PrismaClient()
+  prisma = new PrismaClient(prismaClientOptions)
 } else {
   if (!global.prisma) {
-    global.prisma = new PrismaClient()
+    global.prisma = new PrismaClient(prismaClientOptions)
   }
   prisma = global.prisma
 }
