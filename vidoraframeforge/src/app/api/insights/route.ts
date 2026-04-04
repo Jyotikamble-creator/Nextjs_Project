@@ -55,13 +55,13 @@ export async function GET(request: NextRequest) {
     const [currentMonthPhotos, currentMonthVideos, currentMonthJournals] = await Promise.all([
       prisma.photo.count({
         where: {
-          uploaderId: userId,
+          userId,
           createdAt: { gte: startOfMonth, lte: endOfMonth }
         }
       }),
       prisma.video.count({
         where: {
-          uploaderId: userId,
+          userId,
           createdAt: { gte: startOfMonth, lte: endOfMonth }
         }
       }),
@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
 
     // Total memories
     const [totalPhotos, totalVideos, totalJournals] = await Promise.all([
-      prisma.photo.count({ where: { uploaderId: userId } }),
-      prisma.video.count({ where: { uploaderId: userId } }),
+      prisma.photo.count({ where: { userId } }),
+      prisma.video.count({ where: { userId } }),
       prisma.journal.count({ where: { authorId: userId } })
     ])
 
@@ -108,11 +108,11 @@ export async function GET(request: NextRequest) {
     // Calculate streaks from all activity
     const [allPhotos, allVideos, allJournals] = await Promise.all([
       prisma.photo.findMany({
-        where: { uploaderId: userId },
+        where: { userId },
         select: { createdAt: true }
       }),
       prisma.video.findMany({
-        where: { uploaderId: userId },
+        where: { userId },
         select: { createdAt: true }
       }),
       prisma.journal.findMany({
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
     const today = new Date().toISOString().split('T')[0]
     const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0]
 
-    if (allDates.includes(today) || allDates.includes(yesterday)) {
+    if (allDates.length > 0 && (allDates.includes(today) || allDates.includes(yesterday))) {
       let checkDate = allDates.includes(today) ? today : yesterday
       for (const date of allDates) {
         if (date === checkDate) {
@@ -178,13 +178,13 @@ export async function GET(request: NextRequest) {
       const [photos, videos, journals] = await Promise.all([
         prisma.photo.count({
           where: {
-            uploaderId: userId,
+            userId,
             createdAt: { gte: monthStart, lte: monthEnd }
           }
         }),
         prisma.video.count({
           where: {
-            uploaderId: userId,
+            userId,
             createdAt: { gte: monthStart, lte: monthEnd }
           }
         }),
@@ -215,31 +215,19 @@ export async function GET(request: NextRequest) {
       monthlyActivity.reduce((sum, m) => sum + m.total, 0) / monthlyActivity.length
     )
 
-    // Favorite tag across all content
-    const allContent = [
-      ...allPhotos.map((p: typeof allPhotos[0]) => ({ tags: [], type: 'photo' })),
-      ...allVideos.map((v: typeof allVideos[0]) => ({ tags: [], type: 'video' })),
-      ...allJournals.map((j: typeof allJournals[0]) => ({ tags: [], type: 'journal' }))
-    ]
-
     // Get tags from content
     const photoWithTags = await prisma.photo.findMany({
-      where: { uploaderId: userId, tags: { not: { isEmpty: true } } },
+      where: { userId },
       select: { tags: true }
     })
 
     const videoWithTags = await prisma.video.findMany({
-      where: { uploaderId: userId, tags: { not: { isEmpty: true } } },
-      select: { tags: true }
-    })
-
-    const journalWithTags = await prisma.journal.findMany({
-      where: { authorId: userId, tags: { not: { isEmpty: true } } },
+      where: { userId },
       select: { tags: true }
     })
 
     const allTags = new Map<string, number>()
-    ;[...photoWithTags, ...videoWithTags, ...journalWithTags].forEach((content: any) => {
+    ;[...photoWithTags, ...videoWithTags].forEach((content: any) => {
       if (content.tags && Array.isArray(content.tags)) {
         content.tags.forEach((tag: string) => {
           allTags.set(tag, (allTags.get(tag) || 0) + 1)

@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
     }
 
     const users = follows
-      .map(follow => type === "followers" ? follow.follower : follow.following)
+      .map(follow => {
+        if (type === "followers") {
+          return (follow as any).follower
+        } else {
+          return (follow as any).following
+        }
+      })
       .filter(u => u !== null)
 
     Logger.i(LogTags.AUTH, `Fetched ${users.length} ${type}`)
