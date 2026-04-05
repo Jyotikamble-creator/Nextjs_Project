@@ -1,33 +1,32 @@
-import mongoose from "mongoose";
 import { sanitizeString } from "@/lib/validation";
 
 /**
- * Build search query for text fields
+ * Build Prisma-style search query for text fields.
  */
 export function buildSearchQuery(
   searchTerm: string,
   fields: string[]
 ): Record<string, any> {
   if (!searchTerm?.trim()) return {};
-  
+
   const sanitized = sanitizeString(searchTerm);
-  const searchConditions = fields.map(field => ({
-    [field]: { $regex: sanitized, $options: "i" }
+  const searchConditions = fields.map((field) => ({
+    [field]: { contains: sanitized, mode: "insensitive" }
   }));
-  
-  return { $or: searchConditions };
+
+  return { OR: searchConditions };
 }
 
 /**
- * Build tag filter query
+ * Build Prisma-style tag filter query.
  */
 export function buildTagQuery(tag: string | null): Record<string, any> {
   if (!tag) return {};
-  return { tags: { $in: [sanitizeString(tag)] } };
+  return { tags: { hasSome: [sanitizeString(tag)] } };
 }
 
 /**
- * Build category filter query
+ * Build category filter query.
  */
 export function buildCategoryQuery(category: string | null): Record<string, any> {
   if (!category || category === "all") return {};
@@ -35,7 +34,7 @@ export function buildCategoryQuery(category: string | null): Record<string, any>
 }
 
 /**
- * Build album filter query
+ * Build album filter query.
  */
 export function buildAlbumQuery(album: string | null): Record<string, any> {
   if (!album || album === "all") return {};
@@ -43,23 +42,25 @@ export function buildAlbumQuery(album: string | null): Record<string, any> {
 }
 
 /**
- * Build user filter query with ObjectId validation
+ * Build user filter query.
+ * For PostgreSQL/Prisma IDs, we only validate non-empty string.
  */
 export function buildUserQuery(
   userId: string | null,
-  fieldName: string = "uploader"
+  fieldName: string = "userId"
 ): Record<string, any> {
   if (!userId) return {};
-  
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
+
+  const normalizedUserId = userId.trim();
+  if (!normalizedUserId) {
     throw new Error("Invalid user ID format");
   }
-  
-  return { [fieldName]: new mongoose.Types.ObjectId(userId) };
+
+  return { [fieldName]: normalizedUserId };
 }
 
 /**
- * Build date range query
+ * Build Prisma-style date range query.
  */
 export function buildDateRangeQuery(
   startDate?: string | null,
@@ -67,86 +68,63 @@ export function buildDateRangeQuery(
   fieldName: string = "createdAt"
 ): Record<string, any> {
   const query: Record<string, any> = {};
-  
+
   if (startDate) {
-    query[fieldName] = { ...query[fieldName], $gte: new Date(startDate) };
+    query[fieldName] = { ...query[fieldName], gte: new Date(startDate) };
   }
-  
+
   if (endDate) {
-    query[fieldName] = { ...query[fieldName], $lte: new Date(endDate) };
+    query[fieldName] = { ...query[fieldName], lte: new Date(endDate) };
   }
-  
+
   return query;
 }
 
 /**
- * Merge multiple query objects
+ * Merge multiple query objects.
  */
 export function mergeQueries(...queries: Record<string, any>[]): Record<string, any> {
   return Object.assign({}, ...queries);
 }
 
 /**
- * Build sort options from request parameters
+ * Build Prisma-style sort options from request parameters.
  */
 export function buildSortOptions(
   sortBy: string = "createdAt",
   sortOrder: string = "desc"
-): Record<string, 1 | -1> {
-  const order = sortOrder.toLowerCase() === "asc" ? 1 : -1;
+): Record<string, "asc" | "desc"> {
+  const order: "asc" | "desc" = sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
   return { [sortBy]: order };
 }
 
 /**
- * Common query options for optimized reads
+ * Common query options for optimized reads.
+ * Kept for compatibility in template code paths.
  */
 export const LEAN_QUERY_OPTIONS = {
-  lean: true, // Return plain JavaScript objects instead of Mongoose documents
-  cache: false
+  cache: false,
 };
 
 /**
- * Build aggregation pipeline for content with user info
+ * Build a Prisma-friendly aggregation descriptor.
  */
 export function buildContentAggregation(
   matchQuery: Record<string, any>,
-  userFieldName: string = "uploader"
+  userFieldName: string = "user"
 ) {
-  return [
-    { $match: matchQuery },
-    {
-      $lookup: {
-        from: "users",
-        localField: userFieldName,
-        foreignField: "_id",
-        as: "userInfo",
-        pipeline: [
-          {
-            $project: {
-              name: 1,
-              avatar: 1,
-              email: 1
-            }
-          }
-        ]
-      }
+  return {
+    where: matchQuery,
+    include: {
+      [userFieldName]: {
+        select: {
+          id: true,
+          username: true,
+          avatar: true,
+          email: true,
+        },
+      },
     },
-    {
-      $unwind: {
-        path: "$userInfo",
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $addFields: {
-        [userFieldName]: "$userInfo"
-      }
-    },
-    {
-      $project: {
-        userInfo: 0
-      }
-    },
-    { $sort: { createdAt: -1 } }
-  ];
+    orderBy: { createdAt: "desc" as const },
+  };
 }

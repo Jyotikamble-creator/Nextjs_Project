@@ -1,39 +1,46 @@
-import type mongoose from "mongoose"
-import { Schema, model, models } from "mongoose"
+import type { Video as PrismaVideo } from "@prisma/client"
 
 export const VIDEO_DIMENSIONS = {
   width: 1920, // Fixed order
   height: 1080,
 } as const
 
-export interface IVideo {
-  _id?: mongoose.Types.ObjectId
-  title: string
-  description: string
-  videoUrl: string
-  thumbnailUrl: string
-  uploader: mongoose.Types.ObjectId | {
-    _id: mongoose.Types.ObjectId
-    name: string
+/**
+ * PostgreSQL/Prisma-compatible video contract.
+ * Includes optional legacy fields still consumed by UI code.
+ */
+export interface IVideo extends PrismaVideo {
+  _id?: string
+  videoUrl?: string
+  thumbnailUrl?: string
+  uploader?: {
+    id?: string
+    _id?: string
+    name?: string
+    username?: string
     email?: string
+    avatar?: string | null
+  }
+  user?: {
+    id: string
+    username?: string
+    email?: string
+    avatar?: string | null
+    stats?: {
+      followerCount?: number
+    } | null
   }
   views?: number
   likes?: number
   commentCount?: number
-  tags?: string[]
-  category?: string
   album?: string
   location?: string
   takenAt?: Date
-  privacy?: "public" | "private" | "friends"
   isPublic?: boolean // Deprecated, kept for backward compatibility
   fileId?: string
   fileName?: string
-  duration?: number
   size?: number
   controls?: boolean
-  createdAt?: Date
-  updatedAt?: Date
   transformation?: {
     height: number
     width: number
@@ -41,56 +48,15 @@ export interface IVideo {
   }
 }
 
-const videoSchema = new Schema<IVideo>(
-  {
-    title: { type: String, required: true },
-    description: { type: String, required: true },
-    videoUrl: { type: String, required: true },
-    thumbnailUrl: { type: String, required: true },
-    uploader: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    views: { type: Number, default: 0 },
-    likes: { type: Number, default: 0 },
-    commentCount: { type: Number, default: 0 },
-    tags: [{ type: String }],
-    category: { type: String },
-    album: {
-      type: String,
-      trim: true,
-      maxlength: [100, "Album name cannot exceed 100 characters"],
-    },
-    location: {
-      type: String,
-      trim: true,
-      maxlength: [100, "Location cannot exceed 100 characters"],
-    },
-    takenAt: Date,
-    privacy: { 
-      type: String, 
-      enum: ["public", "private", "friends"], 
-      default: "public" 
-    },
-    isPublic: { type: Boolean, default: true }, // Deprecated, use privacy instead
-    fileId: { type: String },
-    fileName: { type: String },
-    duration: { type: Number, default: 0 },
-    size: { type: Number, default: 0 },
-    controls: { type: Boolean, default: true },
-    transformation: {
-      height: { type: Number, default: VIDEO_DIMENSIONS.height },
-      width: { type: Number, default: VIDEO_DIMENSIONS.width },
-      quality: { type: Number, min: 1, max: 100 },
-    },
-  },
-  { timestamps: true },
-)
+export function isVideoPublic(video: IVideo): boolean {
+  if (typeof video.isPublic === "boolean") return video.isPublic
+  return video.privacy === "public"
+}
 
-// Indexes for optimized queries
-videoSchema.index({ uploader: 1, createdAt: -1 })
-videoSchema.index({ category: 1, privacy: 1 })
-videoSchema.index({ privacy: 1, createdAt: -1 })
-videoSchema.index({ isPublic: 1, createdAt: -1 }) // Legacy index
-videoSchema.index({ tags: 1 })
-videoSchema.index({ title: 'text', description: 'text' }) // Full-text search
+export function getVideoId(video: IVideo): string {
+  return video.id || video._id || ""
+}
 
-const Video = models?.Video || model<IVideo>("Video", videoSchema)
+// Legacy default export kept to avoid breaking imports while migrating from Mongoose.
+const Video = {} as const
 export default Video

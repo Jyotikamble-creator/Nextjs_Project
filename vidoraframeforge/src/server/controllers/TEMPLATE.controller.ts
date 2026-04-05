@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { FEATURE_NAMEService } from "@/server/services/FEATURE_NAME.service"
+import { FEATURE_NAMEService } from "@/server/services/TEMPLATE.service"
 import { Logger, LogTags, categorizeError, ValidationError, DatabaseError } from "@/lib/logger"
 import { requireAuth } from "@/server/utils/apiHelpers"
 import { sanitizeString } from "@/lib/validation"
@@ -105,7 +105,7 @@ export class FEATURE_NAMEController {
 
       const item = await this.featureService.createItem(userId, itemData)
 
-      Logger.i(LogTags.API_RESPONSE, 'Item created successfully', { itemId: item._id, userId })
+      Logger.i(LogTags.API_RESPONSE, 'Item created successfully', { itemId: item.id, userId })
       
       return NextResponse.json(item, { status: 201 })
     } catch (error) {

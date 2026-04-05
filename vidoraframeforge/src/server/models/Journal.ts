@@ -1,118 +1,37 @@
-import { Schema, model, models, type Document } from "mongoose"
+import type { Journal as PrismaJournal, JournalAttachment as PrismaJournalAttachment } from "@prisma/client"
 
-export interface IJournal extends Document {
-  title: string
-  content: string
-  author: Schema.Types.ObjectId | {
-    _id: Schema.Types.ObjectId
-    name: string
-    avatar?: string
+export interface IJournalAttachment extends PrismaJournalAttachment {
+  thumbnailUrl?: string
+  fileId?: string
+  fileName?: string
+  size?: number
+}
+
+/**
+ * PostgreSQL/Prisma-compatible journal contract.
+ * Includes optional legacy fields still used by frontend code during migration.
+ */
+export interface IJournal extends PrismaJournal {
+  author?: {
+    id: string
+    username?: string
+    name?: string
+    avatar?: string | null
+    email?: string
   }
   tags?: string[]
-  attachments?: {
-    type: "photo" | "video"
-    url: string
-    thumbnailUrl?: string
-    fileId: string
-    fileName: string
-    size: number
-  }[]
-  privacy?: "public" | "private" | "friends"
-  isPublic: boolean // Deprecated, kept for backward compatibility
-  mood?: string
+  attachments?: IJournalAttachment[]
+  isPublic?: boolean
   location?: string
   likes?: number
   commentCount?: number
-  createdAt: Date
-  updatedAt: Date
 }
 
-const journalSchema = new Schema<IJournal>(
-  {
-    title: {
-      type: String,
-      required: [true, "Title is required"],
-      trim: true,
-      maxlength: [200, "Title cannot exceed 200 characters"],
-    },
-    content: {
-      type: String,
-      required: [true, "Content is required"],
-      maxlength: [10000, "Content cannot exceed 10,000 characters"],
-    },
-    author: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    tags: [{
-      type: String,
-      trim: true,
-      maxlength: [50, "Tag cannot exceed 50 characters"],
-    }],
-    attachments: [{
-      type: {
-        type: String,
-        enum: ["photo", "video"],
-        required: true,
-      },
-      url: {
-        type: String,
-        required: true,
-      },
-      thumbnailUrl: String,
-      fileId: {
-        type: String,
-        required: true,
-      },
-      fileName: {
-        type: String,
-        required: true,
-      },
-      size: {
-        type: Number,
-        required: true,
-      },
-    }],
-    privacy: { 
-      type: String, 
-      enum: ["public", "private", "friends"], 
-      default: "private" 
-    },
-    isPublic: {
-      type: Boolean,
-      default: false, // Deprecated, use privacy instead
-    },
-    mood: {
-      type: String,
-      trim: true,
-      maxlength: [50, "Mood cannot exceed 50 characters"],
-    },
-    location: {
-      type: String,
-      trim: true,
-      maxlength: [100, "Location cannot exceed 100 characters"],
-    },
-    likes: {
-      type: Number,
-      default: 0,
-    },
-    commentCount: {
-      type: Number,
-      default: 0,
-    },
-  },
-  {
-    timestamps: true,
-  },
-)
+export function isJournalPublic(journal: IJournal): boolean {
+  if (typeof journal.isPublic === "boolean") return journal.isPublic
+  return journal.privacy === "public"
+}
 
-// Indexes for better query performance
-journalSchema.index({ author: 1, createdAt: -1 })
-journalSchema.index({ tags: 1 })
-journalSchema.index({ privacy: 1, createdAt: -1 })
-journalSchema.index({ isPublic: 1, createdAt: -1 }) // Legacy index
-journalSchema.index({ title: 'text', content: 'text' }) // Full-text search
-
-const Journal = models?.Journal || model<IJournal>("Journal", journalSchema)
+// Legacy default export kept to avoid breaking imports while migrating from Mongoose.
+const Journal = {} as const
 export default Journal

@@ -108,7 +108,7 @@ export class VideoController {
         category: body.category,
         tags: Array.isArray(body.tags) ? body.tags.map((tag: string) => sanitizeString(tag)) : [],
         isPublic: body.isPublic !== false,
-        privacy: body.isPublic === false ? 'private' : 'public',
+        privacy: (body.isPublic === false ? 'private' : 'public') as 'public' | 'private' | 'friends',
         fileId: body.fileId,
         fileName: body.fileName,
         size: body.size,
@@ -122,7 +122,7 @@ export class VideoController {
 
       const video = await this.videoService.createVideo(userId, videoData)
 
-      Logger.i(LogTags.VIDEO_UPLOAD, 'Video created successfully', { videoId: video._id, userId })
+      Logger.i(LogTags.VIDEO_UPLOAD, 'Video created successfully', { videoId: video.id, userId })
       
       return NextResponse.json(video, { status: 201 })
     } catch (error) {

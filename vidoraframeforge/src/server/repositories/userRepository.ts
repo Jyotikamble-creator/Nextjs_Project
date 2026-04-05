@@ -1,6 +1,27 @@
 import { prisma } from "@/server/db"
-import { User, Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
+
+const USER_WITH_STATS_SELECT = {
+  id: true,
+  email: true,
+  username: true,
+  firstName: true,
+  lastName: true,
+  bio: true,
+  avatar: true,
+  coverImage: true,
+  location: true,
+  website: true,
+  dateOfBirth: true,
+  role: true,
+  isEmailVerified: true,
+  twoFactorEnabled: true,
+  lastActive: true,
+  createdAt: true,
+  updatedAt: true,
+  stats: true,
+} as const
 
 export interface UserFilters {
   email?: string
@@ -16,8 +37,7 @@ export class UserRepository {
     try {
       return await prisma.user.findUnique({
         where: { id: userId },
-        include: { stats: true },
-        omit: { password: true }
+        select: USER_WITH_STATS_SELECT
       })
     } catch (error) {
       Logger.e(LogTags.DB_QUERY, `Error finding user by ID: ${String(error)}`)
@@ -47,8 +67,7 @@ export class UserRepository {
     try {
       return await prisma.user.findUnique({
         where: { email: email.toLowerCase().trim() },
-        include: { stats: true },
-        omit: { password: true }
+        select: USER_WITH_STATS_SELECT
       })
     } catch (error) {
       Logger.e(LogTags.DB_QUERY, `Error finding user by email: ${String(error)}`)
@@ -97,8 +116,7 @@ export class UserRepository {
 
       return await prisma.user.findMany({
         where,
-        include: { stats: true },
-        omit: { password: true },
+        select: USER_WITH_STATS_SELECT,
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip
@@ -130,8 +148,7 @@ export class UserRepository {
             create: {}
           }
         },
-        include: { stats: true },
-        omit: { password: true }
+        select: USER_WITH_STATS_SELECT
       })
       Logger.i(LogTags.AUTH, `User created: ${user.id}`)
       return user
@@ -161,8 +178,7 @@ export class UserRepository {
       const user = await prisma.user.update({
         where: { id: userId },
         data: updateData,
-        include: { stats: true },
-        omit: { password: true }
+        select: USER_WITH_STATS_SELECT
       })
       Logger.i(LogTags.USER_UPDATE, `User updated: ${userId}`)
       return user
@@ -194,8 +210,7 @@ export class UserRepository {
             update: statsUpdate
           }
         },
-        include: { stats: true },
-        omit: { password: true }
+        select: USER_WITH_STATS_SELECT
       })
     } catch (error) {
       Logger.e(LogTags.DB_QUERY, `Error updating user stats: ${String(error)}`)
@@ -234,8 +249,7 @@ export class UserRepository {
       return await prisma.user.update({
         where: { id: userId },
         data: { lastActive: new Date() },
-        include: { stats: true },
-        omit: { password: true }
+        select: USER_WITH_STATS_SELECT
       })
     } catch (error) {
       Logger.e(LogTags.DB_QUERY, `Error updating lastActive: ${String(error)}`)

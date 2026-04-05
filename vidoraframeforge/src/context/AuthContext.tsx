@@ -1,6 +1,7 @@
 "use client"
 
-import { useSession, signOut, type Session } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
+import type { Session } from "next-auth"
 import { createContext, useContext, type ReactNode } from "react"
 
 interface AuthContextType {
@@ -23,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
 
   const value = {
-    user: session?.user,
+    user: session?.user ?? null,
     isLoggedIn: !!session,
     isAuthenticated: !!session,
     logout: () => signOut({ callbackUrl: "/auth/login" }),

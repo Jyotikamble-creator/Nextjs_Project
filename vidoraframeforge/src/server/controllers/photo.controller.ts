@@ -80,7 +80,7 @@ export class PhotoController {
         album: body.album ? sanitizeString(body.album) : undefined,
         location: body.location ? sanitizeString(body.location) : undefined,
         takenAt: body.takenAt,
-        privacy: body.isPublic === false ? 'private' : 'public',
+        privacy: (body.isPublic === false ? 'private' : 'public') as 'public' | 'private' | 'friends',
         fileId: body.fileId,
         fileName: body.fileName,
         size: body.size
@@ -90,7 +90,7 @@ export class PhotoController {
 
       const photo = await this.photoService.createPhoto(userId, photoData)
 
-      Logger.i(LogTags.PHOTO_UPLOAD, 'Photo created successfully', { photoId: photo._id, userId })
+      Logger.i(LogTags.PHOTO_UPLOAD, 'Photo created successfully', { photoId: photo.id, userId })
       
       return NextResponse.json(photo, { status: 201 })
     } catch (error) {

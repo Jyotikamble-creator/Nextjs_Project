@@ -1,9 +1,4 @@
-import MODEL_NAME, { IMODEL_NAME } from "@/server/models/MODEL_NAME"
-import { connectToDatabase } from "@/server/db"
 import { Logger, LogTags } from "@/lib/logger"
-import { updateUserStats, USER_POPULATE_OPTIONS, isValidObjectId } from "@/server/utils/apiHelpers"
-import { buildSearchQuery, buildUserQuery, mergeQueries } from "@/server/utils/queryHelpers"
-import mongoose from "mongoose"
 
 interface ItemFilters {
   param1?: string | null
@@ -17,6 +12,15 @@ interface CreateItemData {
   field1: string
   field2?: string
   // Add more fields...
+}
+
+export interface IMODEL_NAME {
+  id: string
+  ownerId?: string
+  field1: string
+  field2?: string
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 interface DeleteResult {
@@ -35,196 +39,64 @@ export class FEATURE_NAMEService {
    * Get items with optional filters
    */
   async getItems(filters: ItemFilters): Promise<IMODEL_NAME[]> {
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connected for item fetch')
-
-    const query: Record<string, unknown> = {}
-    
-    // Build filters
-    if (filters.param1) {
-      query.param1 = filters.param1
-    }
-
-    if (filters.search) {
-      Object.assign(query, buildSearchQuery(filters.search, ["field1", "field2"]))
-    }
-
-    if (filters.userId) {
-      if (!isValidObjectId(filters.userId)) {
-        throw new Error("Invalid user ID format")
-      }
-      Object.assign(query, buildUserQuery(filters.userId, "owner"))
-    }
-
-    Logger.d(LogTags.API_REQUEST, 'Executing query', { query, limit: filters.limit })
-
-    const items = await MODEL_NAME.find(query)
-      .populate("owner", USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(filters.limit || 20)
-      .lean()
-
-    Logger.i(LogTags.API_RESPONSE, `Found ${items.length} items`)
-
-    return items as IMODEL_NAME[]
+    Logger.d(LogTags.DB_QUERY, "TEMPLATE getItems called", { filters })
+    // TODO(PostgreSQL): Replace with prisma.<model>.findMany({ where, orderBy, take, skip })
+    return []
   }
 
   /**
    * Get item by ID
    */
   async getItemById(itemId: string): Promise<IMODEL_NAME | null> {
-    await connectToDatabase()
-
-    if (!mongoose.Types.ObjectId.isValid(itemId)) {
-      throw new Error("Invalid item ID format")
-    }
-
-    Logger.d(LogTags.API_REQUEST, 'Fetching item by ID', { itemId })
-
-    const item = await MODEL_NAME.findById(itemId)
-      .populate("owner", USER_POPULATE_OPTIONS)
-      .lean()
-
-    return item as IMODEL_NAME | null
+    Logger.d(LogTags.DB_QUERY, "TEMPLATE getItemById called", { itemId })
+    // TODO(PostgreSQL): Replace with prisma.<model>.findUnique({ where: { id: itemId } })
+    return null
   }
 
   /**
    * Get user's items
    */
   async getUserItems(userId: string, limit: number = 20): Promise<IMODEL_NAME[]> {
-    await connectToDatabase()
-
-    if (!isValidObjectId(userId)) {
-      throw new Error("Invalid user ID format")
-    }
-
-    Logger.d(LogTags.API_REQUEST, 'Fetching items for user', { userId, limit })
-
-    const items = await MODEL_NAME.find({ owner: userId })
-      .populate("owner", USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
-
-    Logger.i(LogTags.API_RESPONSE, `Found ${items.length} items for user`, { userId })
-
-    return items as IMODEL_NAME[]
+    Logger.d(LogTags.DB_QUERY, "TEMPLATE getUserItems called", { userId, limit })
+    // TODO(PostgreSQL): Replace with prisma.<model>.findMany({ where: { ownerId: userId }, take: limit })
+    return []
   }
 
   /**
    * Create new item
    */
   async createItem(userId: string, itemData: CreateItemData): Promise<IMODEL_NAME> {
-    await connectToDatabase()
-    Logger.d(LogTags.DB_CONNECT, 'Database connected for item creation')
-
-    if (!isValidObjectId(userId)) {
-      throw new Error("Invalid user ID format")
+    Logger.d(LogTags.DB_QUERY, "TEMPLATE createItem called", { userId })
+    // TODO(PostgreSQL): Replace with prisma.<model>.create({ data: { ...itemData, ownerId: userId } })
+    return {
+      id: "",
+      ownerId: userId,
+      field1: itemData.field1,
+      field2: itemData.field2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     }
-
-    // Create item document
-    const item = await MODEL_NAME.create({
-      ...itemData,
-      owner: userId,
-      createdAt: new Date()
-    })
-
-    Logger.d(LogTags.API_REQUEST, 'Item document created', { itemId: item._id })
-
-    // Update user stats (if applicable)
-    // await updateUserStats(userId, { totalItems: 1 })
-
-    // Populate and return
-    const populatedItem = await MODEL_NAME.findById(item._id)
-      .populate("owner", USER_POPULATE_OPTIONS)
-      .lean()
-
-    Logger.i(LogTags.API_RESPONSE, 'Item created successfully', { 
-      itemId: item._id, 
-      userId 
-    })
-
-    return populatedItem as IMODEL_NAME
   }
 
   /**
    * Update item (with ownership check)
    */
   async updateItem(itemId: string, userId: string, updates: Partial<CreateItemData>): Promise<IMODEL_NAME | null> {
-    await connectToDatabase()
-
-    if (!mongoose.Types.ObjectId.isValid(itemId)) {
-      throw new Error("Invalid item ID format")
-    }
-
-    Logger.d(LogTags.API_REQUEST, 'Attempting to update item', { itemId, userId })
-
-    // Find and check ownership
-    const item = await MODEL_NAME.findById(itemId).lean()
-    if (!item || item.owner.toString() !== userId) {
-      Logger.w(LogTags.API_REQUEST, 'Item not found or unauthorized', { itemId, userId })
-      return null
-    }
-
-    // Update item
-    const updatedItem = await MODEL_NAME.findByIdAndUpdate(
-      itemId,
-      { $set: updates },
-      { new: true }
-    )
-      .populate("owner", USER_POPULATE_OPTIONS)
-      .lean()
-
-    Logger.i(LogTags.API_RESPONSE, 'Item updated successfully', { itemId, userId })
-
-    return updatedItem as IMODEL_NAME
+    Logger.d(LogTags.DB_QUERY, "TEMPLATE updateItem called", { itemId, userId, updates })
+    // TODO(PostgreSQL): Replace with prisma.<model>.update({ where: { id: itemId }, data: updates })
+    return null
   }
 
   /**
    * Delete item (with ownership check)
    */
   async deleteItem(itemId: string, userId: string): Promise<DeleteResult> {
-    await connectToDatabase()
-
-    if (!mongoose.Types.ObjectId.isValid(itemId)) {
-      throw new Error("Invalid item ID format")
-    }
-
-    Logger.d(LogTags.API_REQUEST, 'Attempting to delete item', { itemId, userId })
-
-    // Find item
-    const item = await MODEL_NAME.findById(itemId).lean()
-
-    if (!item) {
-      Logger.w(LogTags.API_REQUEST, 'Item not found', { itemId })
-      return {
-        success: false,
-        message: "Item not found",
-        notFound: true
-      }
-    }
-
-    // Check ownership
-    if (item.owner.toString() !== userId) {
-      Logger.w(LogTags.API_REQUEST, 'Unauthorized delete attempt', { itemId, userId, ownerId: item.owner })
-      return {
-        success: false,
-        message: "Unauthorized to delete this item"
-      }
-    }
-
-    // Delete item
-    await MODEL_NAME.findByIdAndDelete(itemId)
-    Logger.d(LogTags.API_REQUEST, 'Item deleted from database', { itemId })
-
-    // Update user stats (if applicable)
-    // await updateUserStats(userId, { totalItems: -1 })
-
-    Logger.i(LogTags.API_RESPONSE, 'Item deleted successfully', { itemId, userId })
-
+    Logger.d(LogTags.DB_QUERY, "TEMPLATE deleteItem called", { itemId, userId })
+    // TODO(PostgreSQL): Replace with prisma.<model>.delete({ where: { id: itemId } })
     return {
-      success: true,
-      message: "Item deleted successfully"
+      success: false,
+      message: "Template service: implement deleteItem for your model",
+      notFound: true,
     }
   }
 
@@ -232,20 +104,8 @@ export class FEATURE_NAMEService {
    * Search items
    */
   async searchItems(searchTerm: string, limit: number = 20): Promise<IMODEL_NAME[]> {
-    await connectToDatabase()
-
-    const query = buildSearchQuery(searchTerm, ["field1", "field2"])
-
-    Logger.d(LogTags.API_REQUEST, 'Searching items', { searchTerm, limit })
-
-    const items = await MODEL_NAME.find(query)
-      .populate("owner", USER_POPULATE_OPTIONS)
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .lean()
-
-    Logger.i(LogTags.API_RESPONSE, `Found ${items.length} items matching search`, { searchTerm })
-
-    return items as IMODEL_NAME[]
+    Logger.d(LogTags.DB_QUERY, "TEMPLATE searchItems called", { searchTerm, limit })
+    // TODO(PostgreSQL): Replace with prisma.<model>.findMany using contains/startsWith search
+    return []
   }
 }

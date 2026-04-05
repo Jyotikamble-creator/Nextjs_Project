@@ -1,4 +1,4 @@
-import { userRepository } from "@/server/repositories/UserRepository"
+import { userRepository } from "@/server/repositories/userRepository"
 import { Logger, LogTags } from "@/lib/logger"
 
 export const findUserByEmail = async (email: string) => {

@@ -1,80 +1,38 @@
-import { Schema, model, models, type Document, Types } from "mongoose"
+import type { Comment as PrismaComment } from "@prisma/client"
 
-export interface IComment extends Document {
-  author: Types.ObjectId
-  contentType: "video" | "photo" | "journal"
-  contentId: Types.ObjectId
-  content: string
-  likes: Types.ObjectId[] // Array of user IDs who liked the comment
-  parentComment?: Types.ObjectId // For nested replies
-  isEdited: boolean
-  createdAt: Date
-  updatedAt: Date
+/**
+ * PostgreSQL/Prisma-compatible comment contract.
+ * This replaces the legacy Mongoose model shape.
+ */
+export interface IComment extends PrismaComment {
+  user?: {
+    id: string
+    username?: string
+    email?: string
+    avatar?: string | null
+  }
+  replies?: IComment[]
 }
 
-const commentSchema = new Schema<IComment>(
-  {
-    author: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    contentType: {
-      type: String,
-      enum: ["video", "photo", "journal"],
-      required: true,
-    },
-    contentId: {
-      type: Schema.Types.ObjectId,
-      required: true,
-      refPath: "contentTypeModel",
-    },
-    content: {
-      type: String,
-      required: [true, "Comment content is required"],
-      maxlength: [500, "Comment cannot exceed 500 characters"],
-      trim: true,
-    },
-    likes: [{
-      type: Schema.Types.ObjectId,
-      ref: "User",
-    }],
-    parentComment: {
-      type: Schema.Types.ObjectId,
-      ref: "Comment",
-    },
-    isEdited: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  {
-    timestamps: true,
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true },
-  },
-)
+export type ContentTypeModel = "Video" | "Photo" | "Journal"
 
-// Virtual for the correct model reference based on contentType
-commentSchema.virtual("contentTypeModel").get(function() {
-  switch (this.contentType) {
-    case "video": return "Video"
-    case "photo": return "Photo"
-    case "journal": return "Journal"
-    default: return "Video"
+export function getContentTypeModel(contentType: IComment["contentType"]): ContentTypeModel {
+  switch (contentType) {
+    case "video":
+      return "Video"
+    case "photo":
+      return "Photo"
+    case "journal":
+      return "Journal"
+    default:
+      return "Video"
   }
-})
+}
 
-// Virtual for like count
-commentSchema.virtual("likeCount").get(function() {
-  return this.likes?.length || 0
-})
+export function getLikeCount(comment: IComment): number {
+  return comment.likes ?? 0
+}
 
-// Indexes for optimized queries
-commentSchema.index({ contentType: 1, contentId: 1, createdAt: -1 })
-commentSchema.index({ author: 1, createdAt: -1 })
-commentSchema.index({ parentComment: 1 })
-commentSchema.index({ createdAt: -1 })
-
-const Comment = models?.Comment || model<IComment>("Comment", commentSchema)
+// Legacy default export kept to avoid breaking imports while migrating from Mongoose.
+const Comment = {} as const
 export default Comment

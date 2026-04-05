@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db"
-import { Journal, Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { Logger, LogTags } from "@/lib/logger"
 
 export interface JournalFilters {
@@ -85,12 +85,10 @@ export class JournalRepository {
         where.privacy = "public"
       }
 
+      // Prisma Journal model currently has no tags field.
+      // Keep accepting tags in filters for backward compatibility, but ignore here.
       if (filters.tags) {
-        if (Array.isArray(filters.tags)) {
-          where.tags = { hasSome: filters.tags }
-        } else {
-          where.tags = { has: filters.tags }
-        }
+        Logger.w(LogTags.DB_QUERY, "Journal tags filter ignored: tags are not in current PostgreSQL schema")
       }
 
       if (filters.search) {
@@ -168,7 +166,10 @@ export class JournalRepository {
     }>
   }) {
     try {
-      const { attachments, ...journalFields } = journalData
+      const { attachments, tags, ...journalFields } = journalData
+      if (tags && tags.length > 0) {
+        Logger.w(LogTags.DB_QUERY, "Journal tags ignored during create: tags are not in current PostgreSQL schema")
+      }
       const journal = await prisma.journal.create({
         data: {
           ...journalFields,
@@ -210,9 +211,14 @@ export class JournalRepository {
     }>
   ) {
     try {
+      const { tags, ...safeUpdateData } = updateData
+      if (tags && tags.length > 0) {
+        Logger.w(LogTags.DB_QUERY, "Journal tags ignored during update: tags are not in current PostgreSQL schema")
+      }
+
       const journal = await prisma.journal.update({
         where: { id: journalId },
-        data: updateData,
+        data: safeUpdateData,
         include: {
           ...JOURNAL_POPULATE_OPTIONS,
           attachments: true
@@ -275,18 +281,10 @@ export class JournalRepository {
    */
   async findByTags(tags: string[], limit = 50) {
     try {
-      return await prisma.journal.findMany({
-        where: {
-          privacy: "public",
-          tags: { hasSome: tags }
-        },
-        include: {
-          ...JOURNAL_POPULATE_OPTIONS,
-          attachments: true
-        },
-        orderBy: { createdAt: 'desc' },
-        take: limit
-      })
+      Logger.w(LogTags.DB_QUERY, "findByTags called, but tags are not in current PostgreSQL Journal schema")
+      void tags
+      void limit
+      return []
     } catch (error) {
       Logger.e(LogTags.DB_QUERY, `Error finding journals by tags: ${String(error)}`)
       throw error
@@ -309,9 +307,7 @@ export class JournalRepository {
       }
 
       if (filters.tags) {
-        where.tags = Array.isArray(filters.tags)
-          ? { hasSome: filters.tags }
-          : { has: filters.tags }
+        Logger.w(LogTags.DB_QUERY, "Journal tags filter ignored in count: tags are not in current PostgreSQL schema")
       }
 
       if (filters.privacy) {
@@ -366,13 +362,9 @@ export class JournalRepository {
    */
   async getUserTags(userId: string): Promise<string[]> {
     try {
-      const journals = await prisma.journal.findMany({
-        where: { authorId: userId },
-        select: { tags: true }
-      })
-
-      const allTags = journals.flatMap((j) => j.tags || [])
-      return [...new Set(allTags)].sort()
+      void userId
+      Logger.w(LogTags.DB_QUERY, "getUserTags called, but tags are not in current PostgreSQL Journal schema")
+      return []
     } catch (error) {
       Logger.e(LogTags.DB_QUERY, `Error getting user tags: ${String(error)}`)
       throw error

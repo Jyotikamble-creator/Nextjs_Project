@@ -1,34 +1,27 @@
-import { Schema, model, models, type Document, Types } from "mongoose"
+import type { Follow as PrismaFollow } from "@prisma/client"
 
-export interface IFollow extends Document {
-  follower: Types.ObjectId // User who is following
-  following: Types.ObjectId // User being followed
-  createdAt: Date
+/**
+ * PostgreSQL/Prisma-compatible follow contract.
+ */
+export interface IFollow extends PrismaFollow {
+  follower?: {
+    id: string
+    username?: string
+    email?: string
+    avatar?: string | null
+  }
+  following?: {
+    id: string
+    username?: string
+    email?: string
+    avatar?: string | null
+  }
 }
 
-const followSchema = new Schema<IFollow>(
-  {
-    follower: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    following: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-  },
-  {
-    timestamps: true,
-  },
-)
+export function getFollowKey(followerId: string, followingId: string): string {
+  return `${followerId}:${followingId}`
+}
 
-// Compound index to ensure unique follow relationships and optimize queries
-followSchema.index({ follower: 1, following: 1 }, { unique: true })
-followSchema.index({ following: 1 }) // Optimize queries for followers list
-followSchema.index({ follower: 1 }) // Optimize queries for following list
-followSchema.index({ createdAt: -1 }) // Sort by recent follows
-
-const Follow = models?.Follow || model<IFollow>("Follow", followSchema)
+// Legacy default export kept to avoid breaking imports while migrating from Mongoose.
+const Follow = {} as const
 export default Follow
