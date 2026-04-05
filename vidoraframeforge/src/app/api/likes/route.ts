@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/server/auth-config/auth"
-import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
+import { Logger, LogTags, categorizeError } from "@/lib/logger"
 import { likeRepository } from "@/server/repositories/likeRepository"
 import { videoRepository } from "@/server/repositories/videoRepository"
 import { photoRepository } from "@/server/repositories/photoRepository"
 import { journalRepository } from "@/server/repositories/journalRepository"
 import { prisma } from "@/server/db"
+
+type ContentType = "video" | "photo" | "journal"
 
 // GET /api/likes?contentType=video&contentId=xxx - Check if user liked and get like count
 export async function GET(request: NextRequest) {
@@ -73,25 +75,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Content not found" }, { status: 404 })
     }
 
-    // Toggle like using repository
-    const result = await likeRepository.toggleLike(
-      session.user.id,
-      contentType as any,
-      contentId
-    )
+    const typedContentType = contentType as ContentType
 
-    // Update user stats
-    if (result.liked) {
-      await prisma.userStats.update({
-        where: { userId: session.user.id },
-        data: { likesGiven: { increment: 1 } }
-      })
-    } else {
-      await prisma.userStats.update({
-        where: { userId: session.user.id },
-        data: { likesGiven: { increment: -1 } }
-      })
+    // Toggle like using available repository methods
+    const existingLike = await likeRepository.findOne(session.user.id, typedContentType, contentId)
+
+    if (existingLike) {
+      await likeRepository.delete(session.user.id, typedContentType, contentId)
+      const likeCount = await likeRepository.countByContent(typedContentType, contentId)
+      return NextResponse.json({ liked: false, likeCount })
     }
+
+    await likeRepository.create({
+      userId: session.user.id,
+      contentType: typedContentType,
+      contentId
+    })
+    const likeCount = await likeRepository.countByContent(typedContentType, contentId)
+    const result = { liked: true, likeCount }
 
     return NextResponse.json(result)
   } catch (error) {
@@ -123,18 +124,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Invalid content type" }, { status: 400 })
     }
 
-    // Delete like using repository
-    const deleted = await likeRepository.delete(session.user.id, contentType as any, contentId)
+    const typedContentType = contentType as ContentType
 
-    if (!deleted) {
+    const hasLiked = await likeRepository.hasLiked(session.user.id, typedContentType, contentId)
+    if (!hasLiked) {
       return NextResponse.json({ error: "Like not found" }, { status: 404 })
     }
 
-    // Update user stats
-    await prisma.userStats.update({
-      where: { userId: session.user.id },
-      data: { likesGiven: { increment: -1 } }
-    })
+    await likeRepository.delete(session.user.id, typedContentType, contentId)
 
     return NextResponse.json({ message: "Unlike successful" })
   } catch (error) {

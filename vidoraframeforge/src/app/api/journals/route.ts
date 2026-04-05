@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (userId) {
       filters.authorId = userId
     } else {
-      filters.isPublic = true
+      filters.privacy = "public"
     }
 
     if (tag) {
@@ -129,9 +129,8 @@ export async function POST(request: NextRequest) {
       content: sanitizedContent,
       authorId: session.user.id,
       tags: tags || [],
-      isPublic: isPublic !== false,
+      privacy: isPublic === false ? "private" : "public",
       mood: sanitizedMood,
-      location: sanitizedLocation,
     })
 
     // Create attachments if provided
@@ -152,7 +151,7 @@ export async function POST(request: NextRequest) {
     // Update user stats
     await prisma.userStats.update({
       where: { userId: session.user.id },
-      data: { journalsCreated: { increment: 1 } }
+      data: { totalJournals: { increment: 1 } }
     })
 
     // Fetch with attachments
@@ -248,7 +247,7 @@ export async function PUT(request: NextRequest) {
     if (title !== undefined) updateData.title = sanitizeString(title);
     if (content !== undefined) updateData.content = sanitizeString(content);
     if (tags !== undefined) updateData.tags = tags;
-    if (isPublic !== undefined) updateData.isPublic = isPublic;
+    if (isPublic !== undefined) updateData.privacy = isPublic ? "public" : "private";
     if (mood !== undefined) updateData.mood = mood ? sanitizeString(mood) : null;
     if (location !== undefined) updateData.location = location ? sanitizeString(location) : null;
     updateData.updatedAt = new Date();
@@ -349,7 +348,7 @@ export async function DELETE(request: NextRequest) {
     // Update user stats
     await prisma.userStats.update({
       where: { userId: session.user.id },
-      data: { journalsCreated: { increment: -1 } }
+      data: { totalJournals: { increment: -1 } }
     })
 
     Logger.i(LogTags.JOURNAL_DELETE, 'Journal deleted successfully', {

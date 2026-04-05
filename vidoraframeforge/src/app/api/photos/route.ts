@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
     const filters: any = {}
     
     if (userId) {
-      filters.uploaderId = userId
+      filters.userId = userId
     } else {
-      filters.isPublic = true
+      filters.privacy = "public"
     }
 
     if (album) {
@@ -42,10 +42,12 @@ export async function GET(request: NextRequest) {
     const photos = await prisma.photo.findMany({
       where: filters,
       include: {
-        uploader: {
+        user: {
           select: {
             id: true,
-            name: true,
+            username: true,
+            firstName: true,
+            lastName: true,
             avatar: true,
             email: true
           }
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
     Logger.d(LogTags.PHOTO_UPLOAD, 'User authenticated', { userId: session.user.id });
 
     const body = await request.json()
-    const { title, description, photoUrl, thumbnailUrl, album, tags, isPublic, fileId, fileName, size, width, height, location, takenAt } = body
+    const { title, description, photoUrl, thumbnailUrl, album, tags, isPublic, width, height } = body
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'Request body parsed', {
       hasTitle: !!title,
@@ -119,8 +121,6 @@ export async function POST(request: NextRequest) {
     const sanitizedTitle = title ? sanitizeString(title) : '';
     const sanitizedDescription = description ? sanitizeString(description) : '';
     const sanitizedAlbum = album ? sanitizeString(album) : undefined;
-    const sanitizedLocation = location ? sanitizeString(location) : undefined;
-
     Logger.d(LogTags.PHOTO_UPLOAD, 'Input validation passed', { title: sanitizedTitle });
 
     // Create photo using repository
@@ -128,16 +128,10 @@ export async function POST(request: NextRequest) {
       title: sanitizedTitle,
       description: sanitizedDescription,
       url: photoUrl,
-      thumbnailUrl,
-      uploaderId: session.user.id,
+      userId: session.user.id,
       album: sanitizedAlbum,
       tags: tags || [],
-      location: sanitizedLocation,
-      takenAt: takenAt ? new Date(takenAt) : undefined,
-      isPublic: isPublic !== false,
-      fileId,
-      fileName,
-      size,
+      privacy: isPublic === false ? "private" : "public",
       width,
       height,
     })
@@ -145,17 +139,19 @@ export async function POST(request: NextRequest) {
     // Update user stats
     await prisma.userStats.update({
       where: { userId: session.user.id },
-      data: { photosUploaded: { increment: 1 } }
+      data: { totalPhotos: { increment: 1 } }
     })
 
     // Fetch with uploader
     const populatedPhoto = await prisma.photo.findUnique({
       where: { id: photo.id },
       include: {
-        uploader: {
+        user: {
           select: {
             id: true,
-            name: true,
+            username: true,
+            firstName: true,
+            lastName: true,
             avatar: true,
             email: true
           }
@@ -210,7 +206,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, description, tags, album, location, isPublic } = body
+    const { title, description, tags, album, isPublic } = body
 
     Logger.d(LogTags.PHOTO_UPLOAD, 'Update request body parsed', {
       photoId,
@@ -226,11 +222,11 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Photo not found" }, { status: 404 })
     }
 
-    if (existingPhoto.uploaderId !== session.user.id) {
+    if (existingPhoto.userId !== session.user.id) {
       Logger.w(LogTags.PHOTO_UPLOAD, 'Photo update failed: unauthorized access', {
         photoId,
         userId: session.user.id,
-        uploaderId: existingPhoto.uploaderId
+        uploaderId: existingPhoto.userId
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
@@ -247,8 +243,7 @@ export async function PUT(request: NextRequest) {
     if (description !== undefined) updateData.description = sanitizeString(description);
     if (tags !== undefined) updateData.tags = tags;
     if (album !== undefined) updateData.album = album ? sanitizeString(album) : undefined;
-    if (location !== undefined) updateData.location = location ? sanitizeString(location) : undefined;
-    if (isPublic !== undefined) updateData.isPublic = isPublic;
+    if (isPublic !== undefined) updateData.privacy = isPublic ? "public" : "private";
 
     updateData.updatedAt = new Date();
 
@@ -312,11 +307,11 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Photo not found" }, { status: 404 })
     }
 
-    if (existingPhoto.uploaderId !== session.user.id) {
+    if (existingPhoto.userId !== session.user.id) {
       Logger.w(LogTags.PHOTO_DELETE, 'Photo deletion failed: unauthorized access', {
         photoId,
         userId: session.user.id,
-        uploaderId: existingPhoto.uploaderId
+        uploaderId: existingPhoto.userId
       });
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
@@ -327,7 +322,7 @@ export async function DELETE(request: NextRequest) {
     // Update user stats
     await prisma.userStats.update({
       where: { userId: session.user.id },
-      data: { photosUploaded: { increment: -1 } }
+      data: { totalPhotos: { increment: -1 } }
     })
 
     Logger.i(LogTags.PHOTO_DELETE, 'Photo deleted successfully', {

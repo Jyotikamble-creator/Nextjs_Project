@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/server/db"
+import { Prisma } from "@prisma/client"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
 interface MediaItem {
@@ -42,97 +43,122 @@ export async function GET(request: NextRequest) {
       }
     } : {}
 
-    const searchFilter = search ? {
-      OR: [
-        { title: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
-      ]
-    } : {}
-
-    const tagFilter = tag ? { tags: { hasSome: [tag] } } : {}
-    const userFilter = userId ? { uploaderId: userId } : { isPublic: true }
+    const orderDirection = sortOrder === 'asc' ? 'asc' : 'desc'
 
     let allMedia: MediaItem[] = []
 
     // Fetch photos
     if (!type || type === 'all' || type === 'photo') {
+      const photoWhere: Prisma.PhotoWhereInput = {
+        ...(userId ? { userId } : { privacy: 'public' }),
+        ...dateFilter,
+        ...(tag ? { tags: { hasSome: [tag] } } : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                { description: { contains: search, mode: Prisma.QueryMode.insensitive } }
+              ]
+            }
+          : {})
+      }
+
       const photos = await prisma.photo.findMany({
-        where: {
-          ...userFilter,
-          ...dateFilter,
-          ...tagFilter,
-          ...searchFilter
-        },
+        where: photoWhere,
         include: {
-          uploader: {
+          user: {
             select: {
               id: true,
-              name: true,
+              username: true,
+              firstName: true,
+              lastName: true,
               avatar: true,
               email: true
             }
           }
         },
-        orderBy: { [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc' },
+        orderBy: { [sortBy]: orderDirection },
         take: limit
       })
 
       allMedia.push(...photos.map((photo: any) => ({
         ...photo,
+        uploader: photo.user,
         type: 'photo' as const
       })))
     }
 
-    // Fetch videos (note: videos use uploaderId field)
+    // Fetch videos
     if (!type || type === 'all' || type === 'video') {
+      const videoWhere: Prisma.VideoWhereInput = {
+        ...(userId ? { userId } : { privacy: 'public' }),
+        ...dateFilter,
+        ...(tag ? { tags: { hasSome: [tag] } } : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                { description: { contains: search, mode: Prisma.QueryMode.insensitive } }
+              ]
+            }
+          : {})
+      }
+
       const videos = await prisma.video.findMany({
-        where: {
-          ...userFilter,
-          ...dateFilter,
-          ...tagFilter,
-          ...searchFilter
-        },
+        where: videoWhere,
         include: {
-          uploader: {
+          user: {
             select: {
               id: true,
-              name: true,
+              username: true,
+              firstName: true,
+              lastName: true,
               avatar: true,
               email: true
             }
           }
         },
-        orderBy: { [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc' },
+        orderBy: { [sortBy]: orderDirection },
         take: limit
       })
 
       allMedia.push(...videos.map((video: any) => ({
         ...video,
+        uploader: video.user,
         type: 'video' as const
       })))
     }
 
-    // Fetch journals (note: journals use authorId field)
+    // Fetch journals
     if (!type || type === 'all' || type === 'journal') {
-      const journalUserFilter = userId ? { authorId: userId } : { isPublic: true }
+      const journalWhere: Prisma.JournalWhereInput = {
+        ...(userId ? { authorId: userId } : { privacy: 'public' }),
+        ...dateFilter,
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: Prisma.QueryMode.insensitive } },
+                { content: { contains: search, mode: Prisma.QueryMode.insensitive } }
+              ]
+            }
+          : {})
+      }
+
       const journals = await prisma.journal.findMany({
-        where: {
-          ...journalUserFilter,
-          ...dateFilter,
-          ...tagFilter,
-          ...searchFilter
-        },
+        where: journalWhere,
         include: {
           author: {
             select: {
               id: true,
-              name: true,
+              username: true,
+              firstName: true,
+              lastName: true,
               avatar: true,
               email: true
             }
           }
         },
-        orderBy: { [sortBy]: sortOrder === 'asc' ? 'asc' : 'desc' },
+        orderBy: { [sortBy]: orderDirection },
         take: limit
       })
 

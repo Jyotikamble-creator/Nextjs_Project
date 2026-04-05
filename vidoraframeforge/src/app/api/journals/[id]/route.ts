@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/server/db"
-import { journalRepository } from "@/server/repositories/JournalRepository"
 import { Logger, LogTags, categorizeError, DatabaseError } from "@/lib/logger"
 
 export async function GET(
