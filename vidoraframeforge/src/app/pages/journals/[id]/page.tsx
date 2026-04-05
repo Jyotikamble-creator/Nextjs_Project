@@ -111,15 +111,41 @@ export default function JournalDetailPage() {
     if (!journal) return
 
     try {
+      const normalizedAuthor =
+        journal.author &&
+        typeof journal.author === 'object' &&
+        'name' in journal.author &&
+        typeof journal.author.name === 'string' &&
+        journal.author.name.trim().length > 0
+          ? journal.author.name
+          : 'Unknown'
+
+      const normalizedAttachments: JournalExportData['attachments'] = journal.attachments?.flatMap((attachment) => {
+        if (attachment.type !== 'photo' && attachment.type !== 'video') {
+          return []
+        }
+
+        const mediaType: 'photo' | 'video' = attachment.type
+
+        return [{
+          type: mediaType,
+          url: attachment.url,
+          thumbnailUrl: attachment.thumbnailUrl ?? undefined,
+          fileId: attachment.fileId ?? attachment.id,
+          fileName: attachment.fileName ?? attachment.id,
+          size: attachment.size ?? 0
+        }]
+      })
+
       const exportData: JournalExportData = {
         title: journal.title,
         content: journal.content,
-        author: journal.author && typeof journal.author === 'object' && 'name' in journal.author ? journal.author.name : 'Unknown',
+        author: normalizedAuthor,
         createdAt: journal.createdAt,
-        mood: journal.mood,
+        mood: journal.mood ?? undefined,
         location: journal.location,
         tags: journal.tags,
-        attachments: journal.attachments
+        attachments: normalizedAttachments
       }
 
       await exportJournalToPDF(exportData)

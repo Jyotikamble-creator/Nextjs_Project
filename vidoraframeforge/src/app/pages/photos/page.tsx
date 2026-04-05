@@ -116,10 +116,10 @@ export default function PhotosPage() {
     try {
       const exportData: PhotoExportData[] = filteredPhotos.map(photo => ({
         title: photo.title || 'Untitled Photo',
-        description: photo.description,
+        description: photo.description ?? undefined,
         url: photo.url,
         thumbnailUrl: photo.thumbnailUrl,
-        album: photo.album,
+        album: photo.album ?? undefined,
         tags: photo.tags,
         createdAt: photo.createdAt,
         fileName: photo.fileName || 'photo.jpg',

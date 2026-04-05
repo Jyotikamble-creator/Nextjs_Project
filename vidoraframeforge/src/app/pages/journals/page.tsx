@@ -114,16 +114,44 @@ export default function JournalsPage() {
     }
 
     try {
-      const exportData: JournalExportData[] = journals.map(journal => ({
-        title: journal.title,
-        content: journal.content,
-        author: journal.author && typeof journal.author === 'object' && 'name' in journal.author ? journal.author.name : 'Unknown',
-        createdAt: journal.createdAt,
-        mood: journal.mood,
-        location: journal.location,
-        tags: journal.tags,
-        attachments: journal.attachments
-      }))
+      const exportData: JournalExportData[] = journals.map((journal) => {
+        const normalizedAuthor =
+          journal.author &&
+          typeof journal.author === 'object' &&
+          'name' in journal.author &&
+          typeof journal.author.name === 'string' &&
+          journal.author.name.trim().length > 0
+            ? journal.author.name
+            : 'Unknown'
+
+        const normalizedAttachments: JournalExportData['attachments'] = journal.attachments?.flatMap((attachment) => {
+          if (attachment.type !== 'photo' && attachment.type !== 'video') {
+            return []
+          }
+
+          const mediaType: 'photo' | 'video' = attachment.type
+
+          return [{
+            type: mediaType,
+            url: attachment.url,
+            thumbnailUrl: attachment.thumbnailUrl ?? undefined,
+            fileId: attachment.fileId ?? attachment.id,
+            fileName: attachment.fileName ?? attachment.id,
+            size: attachment.size ?? 0
+          }]
+        })
+
+        return {
+          title: journal.title,
+          content: journal.content,
+          author: normalizedAuthor,
+          createdAt: journal.createdAt,
+          mood: journal.mood ?? undefined,
+          location: journal.location,
+          tags: journal.tags,
+          attachments: normalizedAttachments
+        }
+      })
 
       await exportMultipleJournalsToPDF(exportData)
     } catch (error) {
