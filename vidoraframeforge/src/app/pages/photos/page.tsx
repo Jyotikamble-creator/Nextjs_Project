@@ -8,6 +8,19 @@ import { IPhoto } from "@/server/models/Photo"
 import Link from "next/link"
 import { exportMultiplePhotosToPDF, PhotoExportData } from "@/lib/utils/pdfExport"
 
+function getPhotoId(photo: unknown): string {
+  if (!photo || typeof photo !== "object") return ""
+
+  const maybeWithId = photo as { id?: string; _id?: string | { toString: () => string } }
+  if (typeof maybeWithId.id === "string") return maybeWithId.id
+  if (typeof maybeWithId._id === "string") return maybeWithId._id
+  if (maybeWithId._id && typeof maybeWithId._id.toString === "function") {
+    return maybeWithId._id.toString()
+  }
+
+  return ""
+}
+
 export default function PhotosPage() {
   const { user, isAuthenticated, loading } = useAuth()
   const [photos, setPhotos] = useState<IPhoto[]>([])
@@ -84,7 +97,7 @@ export default function PhotosPage() {
       })
 
       if (response.ok) {
-        setPhotos(photos.filter(photo => photo._id.toString() !== photoId))
+        setPhotos(photos.filter((photo) => getPhotoId(photo) !== photoId))
       } else {
         alert('Failed to delete photo')
       }
@@ -277,12 +290,12 @@ export default function PhotosPage() {
         ) : filteredPhotos.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredPhotos.map((photo) => (
-              <div key={photo._id.toString()} className="relative group">
+              <div key={getPhotoId(photo) || photo.url} className="relative group">
                 <PhotoCard photo={photo} />
                 {/* Action buttons */}
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
                   <button
-                    onClick={() => handleDeletePhoto(photo._id.toString())}
+                    onClick={() => handleDeletePhoto(getPhotoId(photo))}
                     className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg"
                     title="Delete photo"
                   >

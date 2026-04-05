@@ -84,7 +84,7 @@ export default function JournalDetailPage() {
         isPublic: formData.isPublic
       }
 
-      const response = await fetch(`/api/journals/${journal._id}`, {
+      const response = await fetch(`/api/journals/${params.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -137,7 +137,7 @@ export default function JournalDetailPage() {
     }
 
     try {
-      const response = await fetch(`/api/journals/${journal._id}`, {
+      const response = await fetch(`/api/journals/${params.id}`, {
         method: 'DELETE'
       })
 

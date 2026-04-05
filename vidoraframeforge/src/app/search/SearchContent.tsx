@@ -11,6 +11,19 @@ import { IPhoto } from "@/server/models/Photo"
 import { IVideo } from "@/server/models/Video"
 import { IJournal } from "@/server/models/Journal"
 
+function getItemId(item: unknown): string {
+  if (!item || typeof item !== "object") return ""
+
+  const maybeWithId = item as { id?: string; _id?: string | { toString: () => string } }
+  if (typeof maybeWithId.id === "string") return maybeWithId.id
+  if (typeof maybeWithId._id === "string") return maybeWithId._id
+  if (maybeWithId._id && typeof maybeWithId._id.toString === "function") {
+    return maybeWithId._id.toString()
+  }
+
+  return ""
+}
+
 interface SearchResult {
   id: string
   type: 'photo' | 'video' | 'journal'
@@ -47,7 +60,7 @@ export default function SearchContent() {
           fetch(`/api/photos?search=${encodeURIComponent(query)}${user?.id ? `&userId=${user.id}` : ''}`)
             .then(res => res.ok ? res.json() : [])
             .then(data => data.map((item: IPhoto) => ({
-              id: item._id.toString(),
+              id: getItemId(item),
               type: 'photo' as const,
               item,
               relevance: calculateRelevance(item, query, 'photo')
@@ -75,7 +88,7 @@ export default function SearchContent() {
           fetch(`/api/journals?search=${encodeURIComponent(query)}${user?.id ? `&userId=${user.id}` : ''}`)
             .then(res => res.ok ? res.json() : [])
             .then(data => data.map((item: IJournal) => ({
-              id: item._id.toString(),
+              id: getItemId(item),
               type: 'journal' as const,
               item,
               relevance: calculateRelevance(item, query, 'journal')

@@ -8,6 +8,19 @@ import Loader from "@/ui/Loader"
 import { IJournal } from "@/server/models/Journal"
 import { exportMultipleJournalsToPDF, JournalExportData } from "@/lib/utils/pdfExport"
 
+function getJournalId(journal: unknown): string {
+  if (!journal || typeof journal !== "object") return ""
+
+  const maybeWithId = journal as { id?: string; _id?: string | { toString: () => string } }
+  if (typeof maybeWithId.id === "string") return maybeWithId.id
+  if (typeof maybeWithId._id === "string") return maybeWithId._id
+  if (maybeWithId._id && typeof maybeWithId._id.toString === "function") {
+    return maybeWithId._id.toString()
+  }
+
+  return ""
+}
+
 export default function JournalsPage() {
   const { user, isAuthenticated, loading } = useAuth()
   const [journals, setJournals] = useState<IJournal[]>([])
@@ -84,7 +97,7 @@ export default function JournalsPage() {
       })
 
       if (response.ok) {
-        setJournals(journals.filter(journal => journal._id.toString() !== journalId))
+        setJournals(journals.filter((journal) => getJournalId(journal) !== journalId))
       } else {
         alert('Failed to delete journal entry')
       }
@@ -287,12 +300,12 @@ export default function JournalsPage() {
         ) : filteredJournals.length > 0 ? (
           <div className="space-y-6">
             {filteredJournals.map((journal) => (
-              <div key={journal._id.toString()} className="relative group">
+              <div key={getJournalId(journal) || journal.title} className="relative group">
                 <JournalCard journal={journal} />
                 {/* Action buttons */}
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
                   <button
-                    onClick={() => handleDeleteJournal(journal._id.toString())}
+                    onClick={() => handleDeleteJournal(getJournalId(journal))}
                     className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg"
                     title="Delete journal"
                   >

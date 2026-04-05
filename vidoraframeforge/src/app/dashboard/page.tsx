@@ -26,6 +26,19 @@ interface ActivityItem {
   thumbnail?: string
 }
 
+function getEntityId(item: unknown): string {
+  if (!item || typeof item !== "object") return ""
+
+  const maybeWithId = item as { id?: string; _id?: string | { toString: () => string } }
+  if (typeof maybeWithId.id === "string") return maybeWithId.id
+  if (typeof maybeWithId._id === "string") return maybeWithId._id
+  if (maybeWithId._id && typeof maybeWithId._id.toString === "function") {
+    return maybeWithId._id.toString()
+  }
+
+  return ""
+}
+
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth()
   const [videos, setVideos] = useState<IVideo[]>([])
@@ -116,14 +129,14 @@ export default function Dashboard() {
       // Combine and sort by date
       const allActivity: ActivityItem[] = [
         ...photosData.map((photo: IPhoto) => ({
-          id: photo._id.toString(),
+          id: getEntityId(photo),
           type: 'photo' as const,
           title: photo.title,
           createdAt: new Date(photo.createdAt),
           thumbnail: photo.thumbnailUrl
         })),
         ...journalsData.map((journal: IJournal) => ({
-          id: journal._id.toString(),
+          id: getEntityId(journal),
           type: 'journal' as const,
           title: journal.title,
           createdAt: new Date(journal.createdAt)
