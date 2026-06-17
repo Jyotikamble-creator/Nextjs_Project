@@ -274,7 +274,15 @@ vidoraframeforge/
 └── package.json            # Dependencies and scripts
 ```
 
------
+---
+
+## 🌐 Live Demo
+
+Happy to share that the project is successfully deployed to the vercel with whole frontend,backend and database to the neonDB.
+
+🚀 Website: https://vidora-frame-forge.vercel.app/
+
+---
 
 ## Project Overview
 
